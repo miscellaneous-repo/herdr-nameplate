@@ -1,6 +1,6 @@
 # herdr-automatic-rename-win
 
-[English](README.en.md) · [更新日志](CHANGELOG.md) · [MIT](LICENSE)
+[English](README.en.md) · [更新日志](CHANGELOG.md) · [MIT](LICENSE) · v0.3.0
 
 给 herdr 的 Windows 插件：**每个标签页自动叫出「这个对话在干什么」**。
 
@@ -36,7 +36,7 @@ pwsh
 ### A. 从 GitHub 安装（推荐）
 
 ```powershell
-herdr plugin install Aquilonar/herdr-automatic-rename-win --ref v0.2.0 -y
+herdr plugin install Aquilonar/herdr-automatic-rename-win --ref v0.3.0 -y
 herdr plugin enable herdr-automatic-rename-win
 ```
 
@@ -44,13 +44,13 @@ herdr plugin enable herdr-automatic-rename-win
 
 ### B. Release 包 + 安装脚本
 
-下载 `herdr-automatic-rename-win-0.2.0.zip` 解压，或直接克隆仓库，然后：
+下载 `herdr-automatic-rename-win-0.3.0.zip` 解压，或直接克隆仓库，然后：
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\scripts\install.ps1
 ```
 
-脚本会检查 `herdr` / `node`、把插件放到 `%LOCALAPPDATA%\herdr-automatic-rename\0.2.0\`、`unlink` 旧链接再 `link` 新路径，最后跑一次 `doctor`。
+脚本会检查 `herdr` / `node`、把插件放到 `%LOCALAPPDATA%\herdr-automatic-rename\0.3.0\`、`unlink` 旧链接再 `link` 新路径，最后跑一次 `doctor`。
 卸载：`.\scripts\uninstall.ps1`。
 
 ### C. 从 npm 安装
@@ -281,10 +281,9 @@ npm run pass      # 真跑一趟（--verbose）
 
 ```powershell
 npm test
-npm version patch          # 同步 package.json
-# 同步 herdr-plugin.toml 的 version（manifest.test.mjs 会检查一致性）
-git tag v0.2.1 && git push --tags
-gh release create v0.2.1 --generate-notes
+npm version minor          # 同步 package.json（manifest.test.mjs 会检查 herdr-plugin.toml 的 version 一致）
+git tag v0.3.0 && git push --tags
+gh release create v0.3.0 --generate-notes
 npm publish
 ```
 

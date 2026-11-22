@@ -1,6 +1,6 @@
 # herdr-automatic-rename-win
 
-[中文](README.md) · [Changelog](CHANGELOG.md) · [MIT](LICENSE)
+[中文](README.md) · [Changelog](CHANGELOG.md) · [MIT](LICENSE) · v0.3.0
 
 A Windows plugin for **herdr**: every tab names itself after **what the conversation in it is doing**.
 
@@ -34,7 +34,7 @@ A label has three parts, any of which may be empty:
 ### A. From GitHub (recommended)
 
 ```powershell
-herdr plugin install Aquilonar/herdr-automatic-rename-win --ref v0.2.0 -y
+herdr plugin install Aquilonar/herdr-automatic-rename-win --ref v0.3.0 -y
 herdr plugin enable herdr-automatic-rename-win
 ```
 
@@ -46,7 +46,7 @@ Update with `herdr plugin update herdr-automatic-rename-win`.
 powershell -ExecutionPolicy Bypass -File .\scripts\install.ps1
 ```
 
-The script checks `herdr`/`node`, copies the plugin to `%LOCALAPPDATA%\herdr-automatic-rename\0.2.0\`, re-links it and runs `doctor`.
+The script checks `herdr`/`node`, copies the plugin to `%LOCALAPPDATA%\herdr-automatic-rename\0.3.0\`, re-links it and runs `doctor`.
 Remove with `.\scripts\uninstall.ps1`.
 
 ### C. From npm
