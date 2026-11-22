@@ -33,3 +33,8 @@ test("text: stripTrailingGlyph drops a detached status glyph", () => {
   assert.equal(stripTrailingGlyph("Task \u273b"), "Task");
   assert.equal(stripTrailingGlyph("Task 2"), "Task 2");
 });
+
+test("text: bidi overrides are stripped so a label cannot spoof its direction", () => {
+  assert.equal(scrub("a\u202eb"), "a b");
+  assert.equal(scrub("a\u2066b\u2069"), "a b");
+});

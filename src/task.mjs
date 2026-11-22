@@ -60,6 +60,18 @@ export function sessionFile(session, home = "") {
   return "";
 }
 
+/** A record is a human prompt when it is a user message that is not a tool result. */
+function isHumanPrompt(rec) {
+  const msg = rec.message;
+  if (!msg || msg.role !== "user" || rec.isMeta || rec.isCompactSummary) return false;
+  const content = msg.content;
+  if (typeof content === "string") return content.trim().length > 0;
+  if (!Array.isArray(content)) return false;
+  // a tool result is stored as a "user" message; that is not a new turn
+  if (content.some((p) => p && (p.type === "tool_result" || p.type === "toolResult"))) return false;
+  return content.some((p) => p && (p.type === "text" || p.type === "image"));
+}
+
 /** Human text of one "user" record, or "". Tool results ride in user records too. */
 function userRecordText(rec) {
   const content = rec.message.content;
@@ -106,6 +118,12 @@ export function scanTail(chunk) {
   let completed = false;
   const prompts = [];
   let undo = "";
+  // Scanning backwards, `openTurn` flips as soon as a record proves the newest
+  // turn has not finished: a human prompt, an assistant record that stopped for
+  // a tool, or one that carries no terminal stop at all. Older completed turns
+  // must not count then, or `once` would freeze a tab in the middle of the
+  // conversation it is supposed to describe.
+  let openTurn = false;
   for (let i = lines.length - 1; i >= 0; i--) {
     const line = lines[i].trim();
     // the first line of a tail read is almost always a fragment
@@ -117,9 +135,10 @@ export function scanTail(chunk) {
       continue;
     }
     if (!rec || typeof rec !== "object") continue;
-    if (rec.type === "result") completed = true;
+    if (!openTurn && rec.type === "result") completed = true;
+    if (!openTurn && isHumanPrompt(rec)) openTurn = true;
     const msg = rec.message;
-    if (!completed && msg && msg.role === "assistant") {
+    if (!openTurn && msg && msg.role === "assistant") {
       const stop =
         typeof msg.stopReason === "string"
           ? msg.stopReason
@@ -127,7 +146,7 @@ export function scanTail(chunk) {
             ? msg.stop_reason
             : "";
       if (TERMINAL_STOP.has(stop)) completed = true;
-      else if (stop && !MID_TURN_STOP.has(stop)) completed = true;
+      else openTurn = true;
     }
     if (!name && rec.type === "session_info" && typeof rec.name === "string") {
       name = rec.name.trim();

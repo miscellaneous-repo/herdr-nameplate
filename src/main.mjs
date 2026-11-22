@@ -9,7 +9,7 @@
 
 import { loadConfig } from "./config.mjs";
 import { createLogger } from "./log.mjs";
-import { clearTabs, loadState } from "./state.mjs";
+import { clearTabsLocked, loadState } from "./state.mjs";
 import { herdrVersion } from "./herdr.mjs";
 import { reconcile, reconcileLocked } from "./reconcile.mjs";
 import { VERSION } from "./version.mjs";
@@ -86,7 +86,12 @@ export async function main(argv, deps = {}) {
   try {
     if (action === "reset") {
       const tabId = args.flags.tab || args.positional[1] || "";
-      const cleared = clearTabs(cfg, tabId);
+      const reset = clearTabsLocked(cfg, tabId);
+      if (!reset.ok) {
+        process.stderr.write(`herdr-nameplate: ${reset.reason}; try again\n`);
+        return 1;
+      }
+      const cleared = reset.cleared;
       payload.result = { cleared, tabId: tabId || null };
       log.add(`reset ${tabId || "all"}: ${cleared} tab(s)`);
       if (!args.flags.json) process.stdout.write(`reset ${tabId || "all"}: ${cleared} tab(s)\n`);

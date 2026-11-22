@@ -172,3 +172,36 @@ test("state: a v2 file gains provenance and a frozen flag", () => {
     box.done();
   }
 });
+
+test("state: a live owner keeps the lock past the soft window", () => {
+  const box = sandbox();
+  try {
+    const lock = join(box.dir, ".lock");
+    mkdirSync(lock);
+    writeFileSync(join(lock, "owner.json"), JSON.stringify({ pid: process.pid, token: "owner" }));
+    const old = new Date(Date.now() - 120_000);
+    utimesSync(lock, old, old);
+    const got = acquireLock(cfg(box.dir), 30_000);
+    assert.equal(got.ok, false);
+    assert.equal(got.reason, "locked");
+  } finally {
+    box.done();
+  }
+});
+
+test("state: a lock whose owner is gone is stolen", () => {
+  const box = sandbox();
+  try {
+    const lock = join(box.dir, ".lock");
+    mkdirSync(lock);
+    // Above every real pid_max: process.kill() fails, so the owner is dead.
+    writeFileSync(join(lock, "owner.json"), JSON.stringify({ pid: 2147483647, token: "dead" }));
+    const old = new Date(Date.now() - 120_000);
+    utimesSync(lock, old, old);
+    const got = acquireLock(cfg(box.dir), 30_000);
+    assert.equal(got.ok, true);
+    got.release();
+  } finally {
+    box.done();
+  }
+});

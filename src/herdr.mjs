@@ -11,15 +11,23 @@ export function createHerdrClient(cfg, deps = {}) {
   const bin = cfg.herdrBin || "herdr";
   const run =
     deps.run ||
-    ((args) =>
-      execFileSync(bin, args, {
-        encoding: "utf8",
-        timeout: cfg.timeoutMs,
-        windowsHide: true,
-        maxBuffer: 16 * 1024 * 1024,
-        // stderr is not useful for a CLI call that either parses or fails
-        stdio: ["ignore", "pipe", "ignore"],
-      }));
+    ((args) => {
+      try {
+        return execFileSync(bin, args, {
+          encoding: "utf8",
+          timeout: cfg.timeoutMs,
+          windowsHide: true,
+          maxBuffer: 16 * 1024 * 1024,
+          // stderr is not useful for a CLI call that either parses or fails
+          stdio: ["ignore", "pipe", "ignore"],
+        });
+      } catch (err) {
+        // execFileSync's ENOENT message is the opaque "spawnSync herdr ENOENT";
+        // say what to do about it instead.
+        if (err?.code === "ENOENT") throw new Error(`herdr not found (${bin}); put herdr on PATH or set herdrBin in config.json`);
+        throw err;
+      }
+    });
 
   const parse = (raw, what) => {
     try {

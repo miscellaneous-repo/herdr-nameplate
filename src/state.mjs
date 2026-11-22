@@ -109,22 +109,34 @@ export function clearTabs(cfg, tabId) {
 /**
  * The plugin's mutex. herdr fires many events at once and each is its own
  * process; without a lock they would all snapshot, all decide, and all rename.
- * A lock older than `staleMs` is assumed to belong to a process herdr killed.
+ *
+ * A lock is stolen when its owner is gone (a dead pid), or when it is older than
+ * a hard ceiling (a hung process that can never finish). Age alone is not enough:
+ * a pass over many tabs can legitimately outlive the soft window, because every
+ * herdr and git call may take up to `timeoutMs`.
  */
 export function acquireLock(cfg, staleMs = 30_000) {
   const dir = cfg.stateDir || PLUGIN_DIR;
   mkdirSync(dir, { recursive: true });
   const lock = join(dir, ".lock");
-  try {
+  const take = () => {
     mkdirSync(lock);
-    return { ok: true, lock, release: () => release(lock) };
+    const token = `${process.pid}-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+    try {
+      writeFileSync(join(lock, "owner.json"), JSON.stringify({ pid: process.pid, token }));
+    } catch {
+      // The owner file is advisory; a lock without one is still valid.
+    }
+    return { ok: true, lock, release: () => release(lock, token) };
+  };
+  try {
+    return take();
   } catch (err) {
     if (err?.code !== "EEXIST") return { ok: false, reason: `lock error: ${err?.message}` };
     try {
-      if (Date.now() - statSync(lock).mtimeMs > staleMs) {
+      if (lockIsStale(lock, staleMs)) {
         rmSync(lock, { recursive: true, force: true });
-        mkdirSync(lock);
-        return { ok: true, lock, release: () => release(lock) };
+        return take();
       }
     } catch {
       return { ok: false, reason: "locked" };
@@ -133,10 +145,59 @@ export function acquireLock(cfg, staleMs = 30_000) {
   }
 }
 
-function release(lock) {
+const LOCK_MAX_AGE_MS = 10 * 60_000;
+
+function lockOwner(lock) {
   try {
+    return JSON.parse(readFileSync(join(lock, "owner.json"), "utf8"));
+  } catch {
+    return null;
+  }
+}
+
+function pidAlive(pid) {
+  if (!Number.isInteger(pid) || pid <= 0) return false;
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (err) {
+    return err?.code === "EPERM";
+  }
+}
+
+function lockIsStale(lock, staleMs) {
+  let age;
+  try {
+    age = Date.now() - statSync(lock).mtimeMs;
+  } catch {
+    return true; // it vanished between EEXIST and stat: let the caller retry
+  }
+  if (age > LOCK_MAX_AGE_MS) return true;
+  if (age <= staleMs) return false;
+  // Older than the soft window: only steal when the process that took it is gone.
+  const owner = lockOwner(lock);
+  if (owner && Number.isInteger(owner.pid)) return !pidAlive(owner.pid);
+  return true; // a lock from before owner tracking: trust the age
+}
+
+function release(lock, token) {
+  try {
+    const owner = lockOwner(lock);
+    // Another process may have stolen the lock (a hung pass); never delete its lock.
+    if (owner && owner.token && owner.token !== token) return;
     rmSync(lock, { recursive: true, force: true });
   } catch {
     /* ignore */
+  }
+}
+
+/** `reset`, wrapped in the same mutex so it cannot be lost under a running pass. */
+export function clearTabsLocked(cfg, tabId) {
+  const lock = acquireLock(cfg);
+  if (!lock.ok) return { ok: false, reason: lock.reason, cleared: 0 };
+  try {
+    return { ok: true, cleared: clearTabs(cfg, tabId) };
+  } finally {
+    lock.release();
   }
 }

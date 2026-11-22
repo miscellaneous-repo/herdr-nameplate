@@ -174,3 +174,19 @@ test("scanTail: a result record means the turn finished", () => {
   const tail = chunk([{ type: "result", subtype: "success" }]);
   assert.equal(scanTail(tail).completed, true);
 });
+
+test("scanTail: a newer human prompt means the turn is still open", () => {
+  const tail = chunk([
+    { type: "message", message: { role: "assistant", stopReason: "stop", content: [] } },
+    { type: "message", message: { role: "user", content: "再改一版" } },
+  ]);
+  assert.equal(scanTail(tail).completed, false);
+});
+
+test("scanTail: a tool result after the answer does not reopen the turn", () => {
+  const tail = chunk([
+    { type: "message", message: { role: "assistant", stopReason: "stop", content: [] } },
+    { type: "message", message: { role: "user", content: [{ type: "tool_result", content: "ok" }] } },
+  ]);
+  assert.equal(scanTail(tail).completed, true);
+});

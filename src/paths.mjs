@@ -34,6 +34,9 @@ export const PLUGIN_ID = manifestId() || PLUGIN_DIR.split(/[\\/]/).pop() || "her
 export function configRoot(env = process.env) {
   if (env.APPDATA) return join(env.APPDATA, "herdr");
   if (env.XDG_CONFIG_HOME) return join(env.XDG_CONFIG_HOME, "herdr");
+  // A Windows process started without APPDATA (service, scheduled task): use the
+  // documented profile layout rather than silently moving state to ~/.config.
+  if (env.USERPROFILE) return join(env.USERPROFILE, "AppData", "Roaming", "herdr");
   if (env.HOME) return join(env.HOME, ".config", "herdr");
   return "";
 }

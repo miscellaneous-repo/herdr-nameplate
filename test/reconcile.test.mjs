@@ -1,6 +1,9 @@
 // reconcile.test.mjs — the pass, driven by a fake herdr. No CLI, no socket.
 import test from "node:test";
 import assert from "node:assert/strict";
+import { existsSync, mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { reconcile, gitBranch } from "../src/reconcile.mjs";
 import { DEFAULTS } from "../src/config.mjs";
 
@@ -119,6 +122,15 @@ test("pass: a tab renamed before our first pass is treated as hand-named", () =>
   assert.equal(h.calls.renames.some((r) => r.tabId === "w1:t1"), false);
   assert.equal(out.skipped.find((s) => s.tabId === "w1:t1").reason, "hand-renamed");
   assert.equal(state.tabs["w1:t1"].provenance, "manual");
+});
+
+test("pass: an empty separator never makes a label look like ours", () => {
+  const h = fakeHerdr({ snapshot: snapshot("hand written"), process: processMap() });
+  const out = reconcile(cfg({ contextSep: "" }), {
+    herdr: h, env: { USERPROFILE: "C:\\Users\\Ernesto" }, state: { tabs: {} }, persistState: false, git: () => "",
+  });
+  assert.equal(h.calls.renames.some((r) => r.tabId === "w1:t1"), false);
+  assert.equal(out.skipped.find((s) => s.tabId === "w1:t1").reason, "hand-renamed");
 });
 
 test("pass: reset opts a hand-named tab back in", () => {
@@ -379,4 +391,43 @@ test("pass: a later /name still updates a frozen tab", () => {
     ...sessionDeps({ name: "\u4eba\u5de5\u547d\u540d", nameAt: "2026-11-22T00:00:00.000Z" }),
   });
   assert.deepEqual(h.calls.renames, [{ tabId: "w1:t2", label: "\u4eba\u5de5\u547d\u540d" }]);
+});
+
+test("pass: a dry run does not write the state file", () => {
+  const box = mkdtempSync(join(tmpdir(), "ar-reconcile-dry-"));
+  try {
+    const h = fakeHerdr({ snapshot: snapshot(), process: processMap() });
+    const out = reconcile(cfg({ dryRun: true, stateDir: box }), {
+      herdr: h,
+      env: { USERPROFILE: "C:\\Users\\Ernesto" },
+      state: { version: 3, tabs: {}, sessions: {} },
+      git: () => "",
+    });
+    assert.equal(out.renames.length, 2);
+    assert.equal(existsSync(join(box, "state.json")), false);
+  } finally {
+    rmSync(box, { recursive: true, force: true });
+  }
+});
+
+test("pass: a rename whose state write was lost is adopted on the next pass", () => {
+  const h = fakeHerdr({ snapshot: snapshot("workflow \u203a pwsh"), process: processMap() });
+  const state = {
+    version: 3,
+    tabs: {
+      "w1:t1": { label: "old label", source: "program", provenance: "auto", frozen: false },
+    },
+    sessions: {},
+  };
+  const out = reconcile(cfg(), {
+    herdr: h,
+    env: { USERPROFILE: "C:\\Users\\Ernesto" },
+    state,
+    persistState: false,
+    git: () => "",
+  });
+  // The label on screen is exactly what this pass computed: our own write, not a
+  // human edit. It must not be frozen as "hand-renamed".
+  assert.equal(out.skipped.find((s) => s.tabId === "w1:t1").reason, "already correct");
+  assert.equal(state.tabs["w1:t1"].label, "workflow \u203a pwsh");
 });

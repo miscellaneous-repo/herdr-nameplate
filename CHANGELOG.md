@@ -4,6 +4,38 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.1] — 2026-11-23
+
+A review pass before calling the plugin done: no security hole was found (all
+external commands use argv arrays, nothing evaluates strings, no network), but
+several correctness and robustness bugs were fixed.
+
+### Fixed
+
+- `--tab` was dropped by config validation, so `doctor --tab` and
+  `startup --tab` silently considered every tab.
+- `--dry-run` skipped the renames but still wrote `state.json`; it now leaves
+  the state file untouched.
+- The pass lock treated any lock older than 30 s as abandoned, so a slow pass
+  over many tabs could run twice and overwrite state. It now steals only when
+  the owning process is gone (10-minute hard ceiling), and `reset` takes the
+  same lock.
+- `once` could freeze a tab in the middle of a conversation: a completed stop
+  from an earlier turn counted even when a newer prompt had opened a new turn.
+- A rename whose state write failed (disk full, antivirus, shutdown) was read
+  as a hand rename on the next pass and frozen forever; a label that exactly
+  matches the computed target is now adopted.
+- `doctor` with no config file printed the plugin-root path — which is replaced
+  on update — instead of the herdr config directory.
+- An empty `contextSep` made every label look plugin-written, so a hand-typed
+  label could be overwritten on first sight.
+- Labels strip bidi override characters (U+202A–202E, U+2066–2069) that could
+  visually reorder a tab title.
+- Absurd numeric settings (tail size, timeouts, label budgets) are capped with
+  a config warning instead of reaching an allocation or a long timeout.
+- A missing `herdr` binary now reports what to do instead of the opaque
+  `spawnSync herdr ENOENT`.
+
 ## [0.3.0] — 2026-11-23
 
 ### Added

@@ -1,6 +1,6 @@
 id = "herdr-nameplate"
 name = "Herdr Nameplate (Windows)"
-version = "0.3.0"
+version = "0.3.1"
 
 # The upstream plugin (qu8n/herdr-automatic-rename) declares
 # platforms = ["linux", "macos"] and drives everything through bash + jq. This is

@@ -1,6 +1,6 @@
 {
   "name": "herdr-nameplate",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Herdr plugin for Windows: name each tab after where the work is and what its agent is doing.",
   "keywords": [
     "herdr",

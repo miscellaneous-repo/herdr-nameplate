@@ -139,6 +139,20 @@ const NUMBER_KEYS = [
   "maxProcessLookups",
   "timeoutMs",
 ];
+// A typo must not turn into an unbounded allocation or an eight-hour timeout.
+const NUMBER_MAX = {
+  maxNameLen: 200,
+  maxContextLen: 200,
+  maxBranchLen: 200,
+  maxTitleLen: 200,
+  minTaskLen: 200,
+  maxTotalLen: 500,
+  sessionTailBytes: 4 * 1024 * 1024,
+  logMaxBytes: 8 * 1024 * 1024,
+  cacheMaxSessions: 10_000,
+  maxProcessLookups: 128,
+  timeoutMs: 120_000,
+};
 const BOOLEAN_KEYS = [
   "enabled",
   "dryRun",
@@ -186,8 +200,13 @@ function validate(user, warnings) {
       else warnings.push(`"${key}" must be true or false (ignored)`);
     } else if (NUMBER_KEYS.includes(key)) {
       const n = Number(value);
-      if (Number.isFinite(n) && n > 0) out[key] = Math.floor(n);
-      else warnings.push(`"${key}" must be a positive number (ignored)`);
+      if (Number.isFinite(n) && n > 0) {
+        const cap = NUMBER_MAX[key];
+        if (cap && n > cap) {
+          warnings.push(`"${key}" is capped at ${cap} (got ${n})`);
+          out[key] = cap;
+        } else out[key] = Math.floor(n);
+      } else warnings.push(`"${key}" must be a positive number (ignored)`);
     } else if (ARRAY_KEYS.includes(key)) {
       if (Array.isArray(value)) out[key] = value.map((s) => String(s).toLowerCase()).filter(Boolean);
       else warnings.push(`"${key}" must be an array of strings (ignored)`);
@@ -252,8 +271,11 @@ export function loadConfig(env = process.env, overrides = {}) {
   if (logFile) cfg.logFile = logFile;
   if (env.HERDR_AUTOMATIC_RENAME_STATE_DIR) cfg.stateDir = env.HERDR_AUTOMATIC_RENAME_STATE_DIR;
 
-  // CLI flags win over everything
-  Object.assign(cfg, validate(overrides, warnings));
+  // CLI flags win over everything. `onlyTab` is not a config key: it is a
+  // per-invocation filter, so it must not go through the config validator.
+  const { onlyTab: overrideTab, ...rest } = overrides;
+  Object.assign(cfg, validate(rest, warnings));
+  if (overrideTab) cfg.onlyTab = overrideTab;
 
   if (!cfg.stateDir) cfg.stateDir = pluginConfigDir(env);
   if (!cfg.contextSep) cfg.contextSep = DEFAULTS.contextSep;
@@ -267,7 +289,10 @@ export function loadConfig(env = process.env, overrides = {}) {
 
   return {
     ...cfg,
-    configPath: read.length ? read.join(" + ") : candidates[candidates.length - 1],
+    // With no file present, point the user at the herdr-owned config directory
+    // (the first candidate), not at the plugin root: that one is replaced on
+    // every update.
+    configPath: read.length ? read.join(" + ") : candidates[0],
     configFiles: read,
     warnings,
   };

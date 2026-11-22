@@ -1,6 +1,6 @@
 # herdr-nameplate
 
-[English](README.en.md) · [更新日志](CHANGELOG.md) · [GPL-3.0](LICENSE) · v0.3.0
+[English](README.en.md) · [更新日志](CHANGELOG.md) · [GPL-3.0](LICENSE) · v0.3.1
 
 给 herdr 的 Windows 插件：**每个标签页自动叫出「这个对话在干什么」**。
 
@@ -36,7 +36,7 @@ pwsh
 ### A. 从 GitHub 安装（推荐）
 
 ```powershell
-herdr plugin install miscellaneous-repo/herdr-nameplate --ref v0.3.0 -y
+herdr plugin install miscellaneous-repo/herdr-nameplate --ref v0.3.1 -y
 herdr plugin enable herdr-nameplate
 ```
 
@@ -44,13 +44,13 @@ herdr plugin enable herdr-nameplate
 
 ### B. Release 包 + 安装脚本
 
-下载 `herdr-nameplate-0.3.0.zip` 解压，或直接克隆仓库，然后：
+下载 `herdr-nameplate-0.3.1.zip` 解压，或直接克隆仓库，然后：
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\scripts\install.ps1
 ```
 
-脚本会检查 `herdr` / `node`、把插件放到 `%LOCALAPPDATA%\herdr-nameplate\0.3.0\`、`unlink` 旧链接再 `link` 新路径，最后跑一次 `doctor`。
+脚本会检查 `herdr` / `node`、把插件放到 `%LOCALAPPDATA%\herdr-nameplate\0.3.1\`、`unlink` 旧链接再 `link` 新路径，最后跑一次 `doctor`。
 卸载：`.\scripts\uninstall.ps1`。
 
 ### C. 从 npm 安装
@@ -282,8 +282,8 @@ npm run pass      # 真跑一趟（--verbose）
 ```powershell
 npm test
 npm version minor          # 同步 package.json（manifest.test.mjs 会检查 herdr-plugin.toml 的 version 一致）
-git tag v0.3.0 && git push --tags
-gh release create v0.3.0 --generate-notes
+git tag v0.3.1 && git push --tags
+gh release create v0.3.1 --generate-notes
 npm publish
 ```
 

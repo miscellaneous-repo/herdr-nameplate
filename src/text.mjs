@@ -1,8 +1,9 @@
 // text.mjs — pure string helpers: scrubbing, width-aware truncation.
 // No herdr, no filesystem: everything here is testable in isolation.
 
-// C0/C1 control characters.
-const CONTROL = /[\u0000-\u001f\u007f-\u009f]+/g;
+// C0/C1 control characters, plus the bidi overrides that can visually reorder a
+// label (a prompt must not be able to spoof what a tab is called).
+const CONTROL = /[\u0000-\u001f\u007f-\u009f\u202a-\u202e\u2066-\u2069]+/g;
 
 /** Collapse control characters and runs of spaces, then trim. */
 export function scrub(s) {

@@ -136,6 +136,17 @@ test("config: CLI overrides beat both file and environment", () => {
   }
 });
 
+test("config: --tab from the CLI survives validation", () => {
+  const cfg = loadConfig({ HERDR_AUTOMATIC_RENAME_CONFIG: join(tmpdir(), "no-such-config.json") }, { onlyTab: "w1:t1" });
+  assert.equal(cfg.onlyTab, "w1:t1");
+  assert.deepEqual(cfg.warnings, []);
+});
+
+test("config: with no file, the reported path is the herdr config directory", () => {
+  const cfg = loadConfig({ APPDATA: "C:\\Users\\x" });
+  assert.match(cfg.configPath, /herdr[\\/]plugins[\\/]config[\\/]herdr-nameplate[\\/]config\.json$/);
+});
+
 test("config: autoMode only accepts once or follow", () => {
   const box = sandbox();
   try {
@@ -153,4 +164,24 @@ test("config: autoMode only accepts once or follow", () => {
   } finally {
     box.done();
   }
+});
+
+test("config: absurd numbers are capped instead of reaching the allocator", () => {
+  const box = sandbox();
+  try {
+    writeConfig(join(box.dir, "config.json"), { sessionTailBytes: 1e12, timeoutMs: 999_999_999, maxNameLen: 10_000 });
+    const cfg = loadConfig({ HERDR_PLUGIN_CONFIG_DIR: box.dir });
+    assert.equal(cfg.sessionTailBytes, 4 * 1024 * 1024);
+    assert.equal(cfg.timeoutMs, 120_000);
+    assert.equal(cfg.maxNameLen, 200);
+    assert.equal(cfg.warnings.length, 3);
+    assert.match(cfg.warnings[0], /capped/);
+  } finally {
+    box.done();
+  }
+});
+
+test("config: USERPROFILE is the Windows fallback when APPDATA is missing", () => {
+  const list = configCandidates({ USERPROFILE: "C:\\Users\\x" });
+  assert.match(list[0], /Users[\\/]x[\\/]AppData[\\/]Roaming[\\/]herdr[\\/]plugins[\\/]config/);
 });

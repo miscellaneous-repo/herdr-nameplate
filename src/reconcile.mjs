@@ -231,13 +231,15 @@ export function reconcile(cfg, deps = {}) {
     // was typed by a human (or another plugin) before our first pass — most
     // commonly a tab renamed in the second between its creation and the
     // debounced `tab.created` event.
-    const oursLooking = String(tab.label || "").includes(String(cfg.contextSep).trim());
+    const oursLooking =
+      Boolean(String(cfg.contextSep || "").trim()) &&
+      String(tab.label || "").includes(String(cfg.contextSep).trim());
     const looksManual =
       recorded?.provenance === "manual" ||
       Boolean(recorded?.manual) ||
       labelDrifted ||
       (!recorded && !isDefaultLabel(tab.label) && !oursLooking);
-    const handNamed =
+    const prelimHand =
       looksManual && !nameIsNewer && !adoptUnknown && state.adoptOnly !== tab.tab_id;
 
     // Settle the cheap answer first: when the transcript or the agent title
@@ -248,7 +250,7 @@ export function reconcile(cfg, deps = {}) {
     const settled = ["session-name", "session-task", "agent-title", "agent-name"].includes(cheap.source);
 
     let foreground = null;
-    if (!settled && cfg.nameTabs && !handNamed && lookups < cfg.maxProcessLookups) {
+    if (!settled && cfg.nameTabs && !prelimHand && lookups < cfg.maxProcessLookups) {
       lookups += 1;
       try {
         const info = herdr.processInfo(pane.pane_id);
@@ -266,6 +268,14 @@ export function reconcile(cfg, deps = {}) {
       result.errors.push({ tabId: tab.tab_id, where: "naming", message: String(err?.message || err) });
       continue;
     }
+
+    // A pass can rename a tab and then die before it writes the state (or the
+    // write itself can fail: disk full, antivirus). The next pass would see a
+    // label it did not record and freeze the tab as hand-named forever. If the
+    // label on screen is exactly what this pass would write, it is our own work,
+    // not a human edit: adopt it.
+    const recovered = labelDrifted && computed.label === tab.label;
+    const handNamed = prelimHand && !recovered;
 
     if (handNamed) {
       // Keep `label` as the last thing we wrote: the mismatch is what marks the
@@ -354,7 +364,7 @@ export function reconcile(cfg, deps = {}) {
   }
   if (!cfg.dryRun && (!cfg.onlyTab || cfg.onlyTab === state.adoptOnly)) delete state.adoptOnly;
 
-  if (deps.persistState !== false) {
+  if (!cfg.dryRun && deps.persistState !== false) {
     try {
       saveState(cfg, state);
     } catch (err) {
