@@ -1,5 +1,5 @@
 {
-  "name": "herdr-automatic-rename-win",
+  "name": "herdr-nameplate",
   "version": "0.3.0",
   "description": "Herdr plugin for Windows: name each tab after where the work is and what its agent is doing.",
   "keywords": [
@@ -13,15 +13,15 @@
     "claude",
     "codex"
   ],
-  "homepage": "https://github.com/Aquilonar/herdr-automatic-rename-win#readme",
+  "homepage": "https://github.com/miscellaneous-repo/herdr-nameplate#readme",
   "bugs": {
-    "url": "https://github.com/Aquilonar/herdr-automatic-rename-win/issues"
+    "url": "https://github.com/miscellaneous-repo/herdr-nameplate/issues"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Aquilonar/herdr-automatic-rename-win.git"
+    "url": "git+https://github.com/miscellaneous-repo/herdr-nameplate.git"
   },
-  "license": "MIT",
+  "license": "GPL-3.0-only",
   "author": "Athenyx",
   "type": "module",
   "engines": {
@@ -33,7 +33,7 @@
     "./package.json": "./package.json"
   },
   "bin": {
-    "herdr-automatic-rename": "bin/ar.mjs"
+    "herdr-nameplate": "bin/ar.mjs"
   },
   "files": [
     "bin/",
@@ -42,6 +42,7 @@
     "README.md",
     "README.en.md",
     "LICENSE",
+    "NOTICE",
     "CHANGELOG.md"
   ],
   "scripts": {
@@ -52,7 +53,7 @@
     "pass": "node bin/ar.mjs startup --verbose",
     "reset": "node bin/ar.mjs reset",
     "link": "herdr plugin link . --enabled",
-    "unlink": "herdr plugin unlink herdr-automatic-rename-win",
+    "unlink": "herdr plugin unlink herdr-nameplate",
     "status": "herdr plugin list",
     "prepublishOnly": "node --test"
   }

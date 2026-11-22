@@ -1,11 +1,11 @@
 # 故障排查
 
-先跑 `herdr-automatic-rename doctor`（或 `node bin/ar.mjs doctor`）。它不写任何东西，会打印每个 tab 的现状、目标、来源和原因，以及实际读到的配置、state 路径、herdr / node 版本与配置警告。
+先跑 `herdr-nameplate doctor`（或 `node bin/ar.mjs doctor`）。它不写任何东西，会打印每个 tab 的现状、目标、来源和原因，以及实际读到的配置、state 路径、herdr / node 版本与配置警告。
 
 ## 标签完全不改
 
 1. `herdr plugin list`：插件是否 `enabled`？路径是否指向当前仓库？
-2. `herdr plugin log list --plugin herdr-automatic-rename-win --limit 20`：有没有 `exit_code` 非 0？
+2. `herdr plugin log list --plugin herdr-nameplate --limit 20`：有没有 `exit_code` 非 0？
 3. `node bin/ar.mjs doctor`：如果每行都是 `hand-renamed`，说明这些 tab 被人改过名，`reset` 一下：
    ```powershell
    node bin/ar.mjs reset
@@ -18,7 +18,7 @@
 { "tabContext": false, "showBranch": false }
 ```
 
-写进 `%APPDATA%\herdr\plugins\config\herdr-automatic-rename-win\config.json`。确认 doctor 末尾的 `config:` 一行指向这个文件——如果不是，说明你在别处也有一份 `config.json`（插件根目录的那份优先级更高）。
+写进 `%APPDATA%\herdr\plugins\config\herdr-nameplate\config.json`。确认 doctor 末尾的 `config:` 一行指向这个文件——如果不是，说明你在别处也有一份 `config.json`（插件根目录的那份优先级更高）。
 
 ## 我刚改完名，过一会儿又被改回去
 
@@ -40,7 +40,7 @@
 有另一个进程持锁超过 30 秒（通常是 herdr 被挂起时留下了锁目录）。删掉它：
 
 ```powershell
-Remove-Item "$env:APPDATA\herdr\plugins\config\herdr-automatic-rename-win\.lock" -Recurse -Force
+Remove-Item "$env:APPDATA\herdr\plugins\config\herdr-nameplate\.lock" -Recurse -Force
 ```
 
 ## 标签里出现 `' }; $out } }` 之类的脚本碎片
@@ -69,14 +69,14 @@ herdr pane process-info --pane <pane_id>
 
 ## state 文件在哪 / 能不能删
 
-`%APPDATA%\herdr\plugins\config\herdr-automatic-rename-win\state.json`。
+`%APPDATA%\herdr\plugins\config\herdr-nameplate\state.json`。
 
 删掉只会丢失「哪些 tab 被手工改过名」和会话摘要缓存，下一趟会重建。升级自 0.1.0 时，插件根目录的旧 `.state.json` 会被读一次并迁移，之后可以删。
 
 ## 如何完全静音
 
 ```powershell
-herdr plugin disable herdr-automatic-rename-win
+herdr plugin disable herdr-nameplate
 ```
 
 或临时：`HERDR_AUTOMATIC_RENAME_DISABLE=1`。

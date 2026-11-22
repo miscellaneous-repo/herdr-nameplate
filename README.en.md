@@ -1,6 +1,6 @@
-# herdr-automatic-rename-win
+# herdr-nameplate
 
-[中文](README.md) · [Changelog](CHANGELOG.md) · [MIT](LICENSE) · v0.3.0
+[中文](README.md) · [Changelog](CHANGELOG.md) · [GPL-3.0](LICENSE) · v0.3.0
 
 A Windows plugin for **herdr**: every tab names itself after **what the conversation in it is doing**.
 
@@ -34,11 +34,11 @@ A label has three parts, any of which may be empty:
 ### A. From GitHub (recommended)
 
 ```powershell
-herdr plugin install Aquilonar/herdr-automatic-rename-win --ref v0.3.0 -y
-herdr plugin enable herdr-automatic-rename-win
+herdr plugin install miscellaneous-repo/herdr-nameplate --ref v0.3.0 -y
+herdr plugin enable herdr-nameplate
 ```
 
-Update with `herdr plugin update herdr-automatic-rename-win`.
+Update with `herdr plugin update herdr-nameplate`.
 
 ### B. Release zip + script
 
@@ -46,17 +46,17 @@ Update with `herdr plugin update herdr-automatic-rename-win`.
 powershell -ExecutionPolicy Bypass -File .\scripts\install.ps1
 ```
 
-The script checks `herdr`/`node`, copies the plugin to `%LOCALAPPDATA%\herdr-automatic-rename\0.3.0\`, re-links it and runs `doctor`.
+The script checks `herdr`/`node`, copies the plugin to `%LOCALAPPDATA%\herdr-nameplate\0.3.0\`, re-links it and runs `doctor`.
 Remove with `.\scripts\uninstall.ps1`.
 
 ### C. From npm
 
 ```powershell
-npm install -g herdr-automatic-rename-win
-herdr plugin link "$(npm root -g)\herdr-automatic-rename-win" --enabled
+npm install -g herdr-nameplate
+herdr plugin link "$(npm root -g)\herdr-nameplate" --enabled
 ```
 
-> The plugin directory **must** be called `herdr-automatic-rename-win`: it locates herdr's per-plugin config directory (`%APPDATA%\herdr\plugins\config\<directory name>`) by its own directory name. Otherwise set `HERDR_PLUGIN_CONFIG_DIR` or `HERDR_AUTOMATIC_RENAME_CONFIG`.
+> The plugin directory **must** be called `herdr-nameplate`: it locates herdr's per-plugin config directory (`%APPDATA%\herdr\plugins\config\<directory name>`) by its own directory name. Otherwise set `HERDR_PLUGIN_CONFIG_DIR` or `HERDR_AUTOMATIC_RENAME_CONFIG`.
 
 ## Where a name comes from
 
@@ -106,7 +106,7 @@ node bin/ar.mjs reset           # all tabs
 
 Merged lowest → highest:
 
-1. `%APPDATA%\herdr\plugins\config\herdr-automatic-rename-win\config.json`
+1. `%APPDATA%\herdr\plugins\config\herdr-nameplate\config.json`
 2. `<plugin root>\config.json`
 
 `HERDR_AUTOMATIC_RENAME_CONFIG` (legacy `AR_CONFIG`) replaces the list. Unknown keys and bad types become warnings in `doctor`; they never stop the plugin. See [`examples/`](examples) for ready-made files, and `src/config.mjs` for every key and its default.
@@ -118,11 +118,11 @@ Environment: `HERDR_AUTOMATIC_RENAME_CONFIG` / `_DISABLE=1` / `_DRY_RUN=1` / `_T
 ## Commands
 
 ```powershell
-herdr-automatic-rename doctor                 # dry run: current label, target, source, reason
-herdr-automatic-rename doctor --tab w6:t2
-herdr-automatic-rename doctor --json
-herdr-automatic-rename reset [--tab w6:t2]
-herdr-automatic-rename --version
+herdr-nameplate doctor                 # dry run: current label, target, source, reason
+herdr-nameplate doctor --tab w6:t2
+herdr-nameplate doctor --json
+herdr-nameplate reset [--tab w6:t2]
+herdr-nameplate --version
 ```
 
 `doctor` never writes anything (no rename, no state) and prints the config files actually read, the state path, herdr and node versions, and config warnings.
@@ -148,11 +148,11 @@ Reads transcripts only (head and tail), writes only herdr tab labels plus its ow
 ## Uninstall
 
 ```powershell
-herdr plugin disable herdr-automatic-rename-win
-herdr plugin unlink  herdr-automatic-rename-win
+herdr plugin disable herdr-nameplate
+herdr plugin unlink  herdr-nameplate
 ```
 
-`unlink` keeps your state and config; delete `%APPDATA%\herdr\plugins\config\herdr-automatic-rename-win\` to remove them. Tab labels already written are not restored.
+`unlink` keeps your state and config; delete `%APPDATA%\herdr\plugins\config\herdr-nameplate\` to remove them. Tab labels already written are not restored.
 
 ## Development
 
@@ -166,4 +166,4 @@ Rules live in pure modules (`naming.mjs`, `task.mjs`, `text.mjs`); `reconcile.mj
 
 ## License
 
-MIT. Naming semantics and several rules come from [qu8n/herdr-automatic-rename](https://github.com/qu8n/herdr-automatic-rename) (MIT). See [LICENSE](LICENSE).
+GPL-3.0 (`GPL-3.0-only`). Naming semantics and several rules come from [qu8n/herdr-automatic-rename](https://github.com/qu8n/herdr-automatic-rename) (MIT); its original MIT notice is kept in [NOTICE](NOTICE), full terms in [LICENSE](LICENSE).

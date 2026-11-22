@@ -23,7 +23,7 @@ platforms = ["linux", "macos"]
 - **标签语义**：`context › branch › activity`，`contextSep = " › "`（U+203A）；
 - **截断预算**：`maxContextLen` / `maxBranchLen` 默认 12，与上游 `MAX_CONTEXT_LEN` 一致；
 - **手工改名保护**：上游也尊重人手改的名字，并提供 reset 交还；
-- **MIT 许可与版权声明**：见 `LICENSE`。
+- **上游的 MIT 许可与版权声明**：见 `NOTICE`；本项目的 GPL-3.0 条款见 `LICENSE`。
 
 ## 故意没做的（P1 边界）
 

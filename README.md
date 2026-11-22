@@ -1,6 +1,6 @@
-# herdr-automatic-rename-win
+# herdr-nameplate
 
-[English](README.en.md) · [更新日志](CHANGELOG.md) · [MIT](LICENSE) · v0.3.0
+[English](README.en.md) · [更新日志](CHANGELOG.md) · [GPL-3.0](LICENSE) · v0.3.0
 
 给 herdr 的 Windows 插件：**每个标签页自动叫出「这个对话在干什么」**。
 
@@ -36,28 +36,28 @@ pwsh
 ### A. 从 GitHub 安装（推荐）
 
 ```powershell
-herdr plugin install Aquilonar/herdr-automatic-rename-win --ref v0.3.0 -y
-herdr plugin enable herdr-automatic-rename-win
+herdr plugin install miscellaneous-repo/herdr-nameplate --ref v0.3.0 -y
+herdr plugin enable herdr-nameplate
 ```
 
-升级：`herdr plugin update herdr-automatic-rename-win`。
+升级：`herdr plugin update herdr-nameplate`。
 
 ### B. Release 包 + 安装脚本
 
-下载 `herdr-automatic-rename-win-0.3.0.zip` 解压，或直接克隆仓库，然后：
+下载 `herdr-nameplate-0.3.0.zip` 解压，或直接克隆仓库，然后：
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File .\scripts\install.ps1
 ```
 
-脚本会检查 `herdr` / `node`、把插件放到 `%LOCALAPPDATA%\herdr-automatic-rename\0.3.0\`、`unlink` 旧链接再 `link` 新路径，最后跑一次 `doctor`。
+脚本会检查 `herdr` / `node`、把插件放到 `%LOCALAPPDATA%\herdr-nameplate\0.3.0\`、`unlink` 旧链接再 `link` 新路径，最后跑一次 `doctor`。
 卸载：`.\scripts\uninstall.ps1`。
 
 ### C. 从 npm 安装
 
 ```powershell
-npm install -g herdr-automatic-rename-win
-herdr plugin link "$(npm root -g)\herdr-automatic-rename-win" --enabled
+npm install -g herdr-nameplate
+herdr plugin link "$(npm root -g)\herdr-nameplate" --enabled
 ```
 
 npm 安装的目录名就是包名，正好满足下面的目录名要求。
@@ -65,13 +65,13 @@ npm 安装的目录名就是包名，正好满足下面的目录名要求。
 ### 本地开发
 
 ```powershell
-git clone https://github.com/Aquilonar/herdr-automatic-rename-win
-cd herdr-automatic-rename-win
+git clone https://github.com/miscellaneous-repo/herdr-nameplate
+cd herdr-nameplate
 npm test
 npm run link        # = herdr plugin link . --enabled
 ```
 
-> **目录名必须是 `herdr-automatic-rename-win`。** 插件用「自己的目录名」定位 herdr 的配置目录（`%APPDATA%\herdr\plugins\config\<目录名>`）。改过名的话用 `HERDR_PLUGIN_CONFIG_DIR` 或 `HERDR_AUTOMATIC_RENAME_CONFIG` 显式指定。
+> **目录名必须是 `herdr-nameplate`。** 插件用「自己的目录名」定位 herdr 的配置目录（`%APPDATA%\herdr\plugins\config\<目录名>`）。改过名的话用 `HERDR_PLUGIN_CONFIG_DIR` 或 `HERDR_AUTOMATIC_RENAME_CONFIG` 显式指定。
 
 ## 名字从哪来
 
@@ -134,7 +134,7 @@ pi 的终端标题没有信息量，所以任务取自 **agent 自己的会话�
 想让某个 tab 重新回到自动命名：
 
 ```powershell
-herdr plugin action invoke herdr-automatic-rename-win.reset   # 全部
+herdr plugin action invoke herdr-nameplate.reset   # 全部
 node bin/ar.mjs reset w6:t2                                   # 单个（也接受 --tab w6:t2）
 ```
 
@@ -144,7 +144,7 @@ node bin/ar.mjs reset w6:t2                                   # 单个（也接�
 
 配置文件按**低 → 高**优先级合并：
 
-1. `%APPDATA%\herdr\plugins\config\herdr-automatic-rename-win\config.json`（`herdr plugin config-dir herdr-automatic-rename-win` 可查）
+1. `%APPDATA%\herdr\plugins\config\herdr-nameplate\config.json`（`herdr plugin config-dir herdr-nameplate` 可查）
 2. `<插件根>\config.json`（开发时随代码带配置方便）
 
 设了 `HERDR_AUTOMATIC_RENAME_CONFIG`（旧名 `AR_CONFIG`）就只用它。未知键、类型错误只会进 `doctor` 的警告，不会让插件停工。示例见 [`examples/`](examples)：`config.minimal.json`、`no-context.json`、`full.json`。
@@ -200,17 +200,17 @@ node bin/ar.mjs reset w6:t2                                   # 单个（也接�
 ## 命令
 
 ```powershell
-herdr-automatic-rename doctor                 # 干跑：每个 tab 现在叫什么、应该叫什么、为什么
-herdr-automatic-rename doctor --tab w6:t2     # 只看一个
-herdr-automatic-rename doctor --json          # 机器可读
-herdr-automatic-rename reset [w6:t2]         # 忘掉我们的标签，让 tab 重新参与自动命名
-herdr-automatic-rename --version
-herdr-automatic-rename tab.created --dry-run  # 模拟某个事件（排查用）
+herdr-nameplate doctor                 # 干跑：每个 tab 现在叫什么、应该叫什么、为什么
+herdr-nameplate doctor --tab w6:t2     # 只看一个
+herdr-nameplate doctor --json          # 机器可读
+herdr-nameplate reset [w6:t2]         # 忘掉我们的标签，让 tab 重新参与自动命名
+herdr-nameplate --version
+herdr-nameplate tab.created --dry-run  # 模拟某个事件（排查用）
 ```
 
 `doctor` **永不写任何东西**（不改名、不写 state），并会打印实际读到的配置文件、state 路径、herdr 与 node 版本、以及配置警告。
 
-日志默认在 `%APPDATA%\herdr\plugins\config\herdr-automatic-rename-win\last-run.log`，超过 128KB 清空。
+日志默认在 `%APPDATA%\herdr\plugins\config\herdr-nameplate\last-run.log`，超过 128KB 清空。
 
 ## 事件与调度
 
@@ -238,11 +238,11 @@ herdr 没有「前台命令变化」事件，所以每个事件都跑一趟**幂
 ## 卸载
 
 ```powershell
-herdr plugin disable herdr-automatic-rename-win
-herdr plugin unlink  herdr-automatic-rename-win
+herdr plugin disable herdr-nameplate
+herdr plugin unlink  herdr-nameplate
 ```
 
-`unlink` 只解除链接，不删你的 state / 配置；要彻底清掉就删 `%APPDATA%\herdr\plugins\config\herdr-automatic-rename-win\`。npm 全局安装的再 `npm uninstall -g herdr-automatic-rename-win`。
+`unlink` 只解除链接，不删你的 state / 配置；要彻底清掉就删 `%APPDATA%\herdr\plugins\config\herdr-nameplate\`。npm 全局安装的再 `npm uninstall -g herdr-nameplate`。
 
 被本插件改过的 tab 名不会自动还原，逐个改回或 `herdr tab rename <id> <name>`。
 
@@ -289,4 +289,4 @@ npm publish
 
 ## 许可
 
-MIT。命名语义与部分规则来自 [qu8n/herdr-automatic-rename](https://github.com/qu8n/herdr-automatic-rename)（MIT），见 [LICENSE](LICENSE)。
+GPL-3.0（`GPL-3.0-only`）。命名语义与部分规则来自 [qu8n/herdr-automatic-rename](https://github.com/qu8n/herdr-automatic-rename)（MIT），其原始 MIT 声明保留在 [NOTICE](NOTICE)，完整条款见 [LICENSE](LICENSE)。

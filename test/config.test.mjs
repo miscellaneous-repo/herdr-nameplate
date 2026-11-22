@@ -5,6 +5,7 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { DEFAULTS, configCandidates, loadConfig } from "../src/config.mjs";
+import { PLUGIN_DIR } from "../src/paths.mjs";
 
 function sandbox() {
   const dir = mkdtempSync(join(tmpdir(), "ar-config-"));
@@ -22,7 +23,7 @@ test("config: no file means defaults, and stateDir points at herdr's config dire
     const cfg = loadConfig({ APPDATA: box.dir, USERPROFILE: "C:\\Users\\x" });
     assert.equal(cfg.tabContext, DEFAULTS.tabContext);
     assert.equal(cfg.sessionName, true);
-    assert.match(cfg.stateDir, /plugins[\\/]config[\\/]herdr-automatic-rename-win$/);
+    assert.match(cfg.stateDir, /plugins[\\/]config[\\/]herdr-nameplate$/);
     assert.deepEqual(cfg.warnings, []);
   } finally {
     box.done();
@@ -33,7 +34,7 @@ test("config: candidates put herdr's config dir before the plugin root", () => {
   const list = configCandidates({ APPDATA: "C:\\Users\\x\\AppData\\Roaming" });
   assert.equal(list.length, 2);
   assert.match(list[0], /AppData[\\/]Roaming[\\/]herdr[\\/]plugins[\\/]config/);
-  assert.match(list[1], /herdr-automatic-rename-win[\\/]config\.json$/);
+  assert.equal(list[1], join(PLUGIN_DIR, "config.json"));
 });
 
 test("config: HERDR_PLUGIN_CONFIG_DIR moves the per-plugin directory", () => {
@@ -138,7 +139,7 @@ test("config: CLI overrides beat both file and environment", () => {
 test("config: autoMode only accepts once or follow", () => {
   const box = sandbox();
   try {
-    const dir = join(box.dir, "herdr", "plugins", "config", "herdr-automatic-rename-win");
+    const dir = join(box.dir, "herdr", "plugins", "config", "herdr-nameplate");
     writeConfig(join(dir, "config.json"), { autoMode: "follow" });
     const cfg = loadConfig({ APPDATA: box.dir, USERPROFILE: "C:\\Users\\x" });
     assert.equal(cfg.autoMode, "follow");

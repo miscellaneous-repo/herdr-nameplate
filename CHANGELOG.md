@@ -43,7 +43,7 @@ The first release meant to be installed by strangers.
 
 ### Added
 
-- `herdr-automatic-rename` CLI (`--version`, `--help`, `--dry-run`, `--tab`,
+- `herdr-nameplate` CLI (`--version`, `--help`, `--dry-run`, `--tab`,
   `--json`), installable from npm with a `bin` entry point.
 - `doctor` reports the config files actually read, the state path, detected
   herdr and node versions, and any config warnings.
@@ -54,7 +54,7 @@ The first release meant to be installed by strangers.
 ### Changed
 
 - **Runtime state moved** from `<plugin>/.state.json` to herdr's per-plugin
-  config directory (`%APPDATA%\herdr\plugins\config\herdr-automatic-rename-win\state.json`),
+  config directory (`%APPDATA%\herdr\plugins\config\herdr-nameplate\state.json`),
   because `herdr plugin update` replaces the plugin directory. An old file next
   to the code is read once and migrated.
 - Configuration is now read from herdr's plugin config directory first and the

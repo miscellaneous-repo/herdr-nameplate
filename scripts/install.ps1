@@ -1,9 +1,9 @@
 <#
 .SYNOPSIS
-  Install herdr-automatic-rename-win from a checkout or an unpacked release.
+  Install herdr-nameplate from a checkout or an unpacked release.
 
 .DESCRIPTION
-  Copies the plugin to %LOCALAPPDATA%\herdr-automatic-rename\<version>, links it
+  Copies the plugin to %LOCALAPPDATA%\herdr-nameplate\<version>, links it
   with herdr, and runs a dry pass so you can see what it would name.
 
 .PARAMETER Source
@@ -22,7 +22,7 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$pluginId = 'herdr-automatic-rename-win'
+$pluginId = 'herdr-nameplate'
 $payload = @('bin', 'src', 'herdr-plugin.toml', 'package.json', 'README.md', 'README.en.md', 'LICENSE', 'CHANGELOG.md', 'docs', 'examples')
 
 function Require-Command([string]$Name, [string]$Hint) {

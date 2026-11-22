@@ -3,8 +3,8 @@
 ## 开发
 
 ```powershell
-git clone https://github.com/Aquilonar/herdr-automatic-rename-win
-cd herdr-automatic-rename-win
+git clone https://github.com/miscellaneous-repo/herdr-nameplate
+cd herdr-nameplate
 npm test
 npm run link        # 把当前目录链进 herdr，改代码后事件即生效
 npm run doctor      # 干跑，看看每个 tab 会被叫什么
@@ -39,5 +39,5 @@ node bin/ar.mjs --version
 请附上：
 
 - `node bin/ar.mjs doctor --json` 的输出（`--json` 不含路径以外的隐私内容，但会包含 cwd 与 tab 名，自行脱敏）；
-- `%APPDATA%\herdr\plugins\config\herdr-automatic-rename-win\last-run.log` 的相关几行；
+- `%APPDATA%\herdr\plugins\config\herdr-nameplate\last-run.log` 的相关几行；
 - `herdr --version`、`node --version`、Windows 版本。

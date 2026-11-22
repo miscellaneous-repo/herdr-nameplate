@@ -53,7 +53,7 @@ test("cli: --help prints usage without touching herdr", async () => {
   try {
     const { code, out } = await capture(() => main(["--help"], { env: box.env }));
     assert.equal(code, 0);
-    assert.match(out, /herdr-automatic-rename/);
+    assert.match(out, /herdr-nameplate/);
     assert.match(out, /doctor/);
   } finally {
     box.done();

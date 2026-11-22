@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-  Uninstall herdr-automatic-rename-win.
+  Uninstall herdr-nameplate.
 
 .DESCRIPTION
   Unlinks the plugin and, with -Purge, deletes the installed files and the
@@ -8,8 +8,8 @@
   your configuration and state are left in place.
 
 .PARAMETER Purge
-  Also delete %LOCALAPPDATA%\herdr-automatic-rename and
-  %APPDATA%\herdr\plugins\config\herdr-automatic-rename-win.
+  Also delete %LOCALAPPDATA%\herdr-nameplate and
+  %APPDATA%\herdr\plugins\config\herdr-nameplate.
 
 .EXAMPLE
   powershell -ExecutionPolicy Bypass -File .\scripts\uninstall.ps1
@@ -20,7 +20,7 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
-$pluginId = 'herdr-automatic-rename-win'
+$pluginId = 'herdr-nameplate'
 
 $herdr = Get-Command 'herdr' -ErrorAction SilentlyContinue
 if ($herdr) {
@@ -32,7 +32,7 @@ if ($herdr) {
 }
 
 $configDir = Join-Path $env:APPDATA "herdr\plugins\config\$pluginId"
-$installDir = Join-Path $env:LOCALAPPDATA 'herdr-automatic-rename'
+$installDir = Join-Path $env:LOCALAPPDATA 'herdr-nameplate'
 
 if ($Purge) {
   foreach ($path in @($installDir, $configDir)) {

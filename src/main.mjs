@@ -14,12 +14,12 @@ import { herdrVersion } from "./herdr.mjs";
 import { reconcile, reconcileLocked } from "./reconcile.mjs";
 import { VERSION } from "./version.mjs";
 
-const USAGE = `herdr-automatic-rename-win ${VERSION} — tab naming for herdr on Windows
+const USAGE = `herdr-nameplate ${VERSION} — tab naming for herdr on Windows
 
 Usage:
-  herdr-automatic-rename <event>        one reconcile pass (herdr calls this)
-  herdr-automatic-rename doctor         explain what a pass would do
-  herdr-automatic-rename reset [tab]    forget our labels, opt the tab back in
+  herdr-nameplate <event>        one reconcile pass (herdr calls this)
+  herdr-nameplate doctor         explain what a pass would do
+  herdr-nameplate reset [tab]    forget our labels, opt the tab back in
 
 Options:
   --dry-run          compute, print, change nothing
@@ -30,7 +30,7 @@ Options:
   --help, -h         print this help
 
 Configuration lives in herdr's plugin config directory:
-  %APPDATA%\\herdr\\plugins\\config\\herdr-automatic-rename-win\\config.json
+  %APPDATA%\\herdr\\plugins\\config\\herdr-nameplate\\config.json
 `;
 
 function parseArgs(argv) {
@@ -129,7 +129,7 @@ export async function main(argv, deps = {}) {
     log.add(`fatal: ${err?.message || err}`);
     log.flush();
     if (action === "doctor") {
-      process.stderr.write(`automatic-rename-win: ${err?.message || err}\n`);
+      process.stderr.write(`herdr-nameplate: ${err?.message || err}\n`);
       return 1;
     }
     return 0;

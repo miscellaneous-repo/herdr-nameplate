@@ -6,7 +6,7 @@
 // %APPDATA%\herdr\plugins\github-installations\…, or from a global npm install,
 // and every one of those must find the same config and state.
 
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -14,11 +14,21 @@ import { fileURLToPath } from "node:url";
 export const PLUGIN_DIR = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
 /**
- * The plugin id. herdr derives it from the directory name for a linked plugin,
- * and it is what both herdr and this plugin use to name the config directory —
- * so renaming the checkout moves the config with it only if this stays in sync.
+ * The plugin id, read from the manifest so the config directory is the same
+ * however the plugin was installed: a linked checkout, an npm global install,
+ * or a `herdr plugin install` checkout (whose directory is just `checkout`).
  */
-export const PLUGIN_ID = PLUGIN_DIR.split(/[\\/]/).pop() || "herdr-automatic-rename";
+function manifestId() {
+  try {
+    const text = readFileSync(join(PLUGIN_DIR, "herdr-plugin.toml"), "utf8");
+    const match = /^\s*id\s*=\s*"([^"]+)"/m.exec(text);
+    return match ? match[1] : "";
+  } catch {
+    return "";
+  }
+}
+
+export const PLUGIN_ID = manifestId() || PLUGIN_DIR.split(/[\\/]/).pop() || "herdr-nameplate";
 
 /** %APPDATA% on Windows, $XDG_CONFIG_HOME elsewhere. */
 export function configRoot(env = process.env) {
