@@ -1,0 +1,9 @@
+{
+  "tabContext": true,
+  "showBranch": true,
+  "sessionTask": true,
+  "sessionName": true,
+  "maxTitleLen": 28,
+  "maxContextLen": 12,
+  "maxBranchLen": 12
+}

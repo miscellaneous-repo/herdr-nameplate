@@ -1,20 +1,59 @@
 {
   "name": "herdr-automatic-rename-win",
-  "version": "0.1.0",
-  "private": true,
-  "description": "Herdr plugin: name tabs after what each conversation is doing (Windows port, Node)",
+  "version": "0.2.0",
+  "description": "Herdr plugin for Windows: name each tab after where the work is and what its agent is doing.",
+  "keywords": [
+    "herdr",
+    "herdr-plugin",
+    "windows",
+    "tab",
+    "terminal",
+    "naming",
+    "pi",
+    "claude",
+    "codex"
+  ],
+  "homepage": "https://github.com/Aquilonar/herdr-automatic-rename-win#readme",
+  "bugs": {
+    "url": "https://github.com/Aquilonar/herdr-automatic-rename-win/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Aquilonar/herdr-automatic-rename-win.git"
+  },
+  "license": "MIT",
+  "author": "Athenyx",
   "type": "module",
   "engines": {
     "node": ">=20"
   },
+  "main": "src/main.mjs",
+  "exports": {
+    ".": "./src/main.mjs",
+    "./package.json": "./package.json"
+  },
+  "bin": {
+    "herdr-automatic-rename": "bin/ar.mjs"
+  },
+  "files": [
+    "bin/",
+    "src/",
+    "herdr-plugin.toml",
+    "README.md",
+    "README.en.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
   "scripts": {
     "test": "node --test",
+    "test:watch": "node --test --watch",
     "doctor": "node bin/ar.mjs doctor",
     "doctor:json": "node bin/ar.mjs doctor --json",
     "pass": "node bin/ar.mjs startup --verbose",
     "reset": "node bin/ar.mjs reset",
     "link": "herdr plugin link . --enabled",
     "unlink": "herdr plugin unlink herdr-automatic-rename-win",
-    "status": "herdr plugin list"
+    "status": "herdr plugin list",
+    "prepublishOnly": "node --test"
   }
 }

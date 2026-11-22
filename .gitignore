@@ -1,8 +1,10 @@
-# runtime state (machine-local: label history, caches, hand-rename memory)
+node_modules/
 .state.json
 last-run.log
+labels-before.json
 config.json
 .lock/
-
-# throwaway debug scripts
+_lock
 _dbg*.mjs
+*.tmp
+npm-debug.log*

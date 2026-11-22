@@ -1,12 +1,12 @@
 id = "herdr-automatic-rename-win"
 name = "Herdr Automatic Rename (Windows)"
-version = "0.1.0"
+version = "0.2.0"
 
 # The upstream plugin (qu8n/herdr-automatic-rename) declares
 # platforms = ["linux", "macos"] and drives everything through bash + jq. This is
 # a Windows port: same idea, execution layer replaced with node.
 min_herdr_version = "0.7.1"
-description = "Name herdr tabs after where the work is and what is running there -- the directory, the git branch, then the foreground program or the task an agent reports. Windows port of herdr-automatic-rename (tab naming only)."
+description = "Name herdr tabs after where the work is and what its agent is doing: the directory, the git branch, then the task the agent in that pane reported. Windows port of herdr-automatic-rename, rewritten in Node."
 platforms = ["windows"]
 
 # herdr runs [[startup]] once per enabled plugin after it restores the session,
