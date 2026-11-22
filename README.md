@@ -107,6 +107,17 @@ pi 的终端标题没有信息量，所以任务取自 **agent 自己的会话�
 
 **开销**：按 `(TASK_VERSION, 文件大小, mtime)` 缓存在 state 文件里，会话没变就完全不读盘。
 
+## 自动命名：once / follow
+
+`autoMode` 决定「自动起的名字」还跟不跟着对话变：
+
+| 值 | 行为 |
+|---|---|
+| `once`（默认） | 先给个占位名（程序名/agent 名），等这个会话**第一次完成**（助手消息的 `stopReason`/`stop_reason` 不是 `tool_use` 一类，或出现 `result` 记录）且读到有意义的名字（`/name`、任务摘要、`ai-title`）时改名，然后**冻结**，之后对话再变也不动它 |
+| `follow` | 每次对账都按当前对话更新，适合想让标签实时反映进度的场景 |
+
+冻结是「黏住好名字」而不是「锁死」：你之后手工改 tab 名、或再敲一次 `/name`，仍然会覆盖它（两条同级手动通道）。另外有**不许退化**：`session-name` > `session-task` > `agent-title` > `agent-name` > `agent-cmdline` > `agent-program` > `program` > `agent-kind` > `shell`，一趟读不到会话（比如文件被清理）只会保留旧标签，不会退回 `pwsh`。
+
 ## 手动命名（两条同级通道）
 
 | 通道 | 怎么用 | 插件怎么发现 |
@@ -148,6 +159,7 @@ node bin/ar.mjs reset w6:t2                                   # 单个（也接�
 | `agentTitles` | `true` | 采用 agent 上报的终端标题 |
 | `sessionTask` | `true` | 从会话记录推导「在干什么」 |
 | `sessionName` | `true` | 采用 `/name` 给的名字（原样） |
+| `autoMode` | `"once"` | `once` = 第一轮完成后命名并冻结；`follow` = 一直跟着对话改 |
 | `sessionTailBytes` | `65536` | 首次尾读字节数（会试 4×、16×） |
 | `maxNameLen` | `20` | 程序名 / 兜底名 / `/name` 的宽度 |
 | `maxContextLen` | `12` | 目录段宽度 |

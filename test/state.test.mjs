@@ -30,7 +30,11 @@ test("state: a missing file loads as an empty v2 state", () => {
 test("state: save then load round-trips, and leaves no temporary file behind", () => {
   const box = sandbox();
   try {
-    const state = { version: STATE_VERSION, tabs: { "w1:t1": { label: "a", source: "program", ownName: "1", nameSeenAt: "" } }, sessions: {} };
+    const state = {
+      version: STATE_VERSION,
+      tabs: { "w1:t1": { label: "a", source: "program", provenance: "auto", frozen: true, ownName: "1", nameSeenAt: "" } },
+      sessions: {},
+    };
     saveState(cfg(box.dir), state);
     const loaded = loadState(cfg(box.dir));
     assert.deepEqual(loaded.state, state);
@@ -138,6 +142,32 @@ test("state: the saved file is valid JSON with a trailing newline", () => {
     const raw = readFileSync(join(box.dir, "state.json"), "utf8");
     assert.ok(raw.endsWith("\n"));
     assert.doesNotThrow(() => JSON.parse(raw));
+  } finally {
+    box.done();
+  }
+});
+
+test("state: a v2 file gains provenance and a frozen flag", () => {
+  const box = sandbox();
+  try {
+    writeFileSync(
+      join(box.dir, "state.json"),
+      JSON.stringify({
+        version: 2,
+        tabs: {
+          "w1:t1": { label: "workflow \u203a pi", source: "agent-cmdline", ownName: "1", nameSeenAt: "" },
+          "w1:t2": { label: "", source: "manual", manual: true, ownName: "2", nameSeenAt: "" },
+        },
+        sessions: {},
+      }),
+    );
+    const { state } = loadState(cfg(box.dir));
+    assert.equal(state.version, STATE_VERSION);
+    assert.equal(state.tabs["w1:t1"].provenance, "auto");
+    assert.equal(state.tabs["w1:t1"].frozen, true);
+    assert.equal(state.tabs["w1:t2"].provenance, "manual");
+    assert.equal(state.tabs["w1:t2"].frozen, false);
+    assert.equal("manual" in state.tabs["w1:t2"], false);
   } finally {
     box.done();
   }

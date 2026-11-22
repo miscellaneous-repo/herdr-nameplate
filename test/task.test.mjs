@@ -147,3 +147,30 @@ test("pickTask: a recent solid statement still beats the opener", () => {
   });
   assert.equal(out, "你要去掉一个字段");
 });
+
+test("scanTail: a finished turn is detected from pi's stopReason", () => {
+  const tail = chunk([
+    { type: "message", message: { role: "assistant", stopReason: "toolUse", content: [] } },
+    { type: "message", message: { role: "assistant", stopReason: "stop", content: [] } },
+  ]);
+  assert.equal(scanTail(tail).completed, true);
+});
+
+test("scanTail: a turn that is still calling tools is not finished", () => {
+  const tail = chunk([
+    { type: "message", message: { role: "assistant", stopReason: "toolUse", content: [] } },
+  ]);
+  assert.equal(scanTail(tail).completed, false);
+});
+
+test("scanTail: Claude's stop_reason counts the same way", () => {
+  const done = chunk([{ type: "assistant", message: { role: "assistant", stop_reason: "end_turn", content: [] } }]);
+  const mid = chunk([{ type: "assistant", message: { role: "assistant", stop_reason: "tool_use", content: [] } }]);
+  assert.equal(scanTail(done).completed, true);
+  assert.equal(scanTail(mid).completed, false);
+});
+
+test("scanTail: a result record means the turn finished", () => {
+  const tail = chunk([{ type: "result", subtype: "success" }]);
+  assert.equal(scanTail(tail).completed, true);
+});

@@ -1,14 +1,14 @@
 // state.mjs — what the plugin remembers between passes.
 //
 // state = {
-//   version: 2,
-//   tabs: { "<tab_id>": { label, source, ownName, nameSeenAt } },
-//   sessions: { "<path>": { stamp, name, nameAt, task } },
+//   version: 3,
+//   tabs: { "<tab_id>": { label, source, provenance, frozen, ownName, nameSeenAt } },
+//   sessions: { "<path>": { stamp, name, nameAt, task, completed } },
 // }
 //
-// `tabs` exists to answer one question: is the label herdr reports the one we
-// wrote, or did a human type it? `sessions` is a cache keyed on
-// (TASK_VERSION, size, mtime) so a pass normally reads no session file at all.
+// `tabs` answers two questions: is the label herdr reports the one we wrote, or
+// did a human type it (`provenance`: auto | manual), and in `once` mode has this
+// tab already been named (`frozen`).
 //
 // Writes are atomic (write a temp file, rename over) because a rename can be
 // interrupted by herdr shutting down mid-pass.
@@ -17,7 +17,7 @@ import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, statSync, writ
 import { dirname, join } from "node:path";
 import { PLUGIN_DIR } from "./paths.mjs";
 
-export const STATE_VERSION = 2;
+export const STATE_VERSION = 3;
 const LEGACY_FILE_NAME = ".state.json";
 
 export function statePath(cfg) {
@@ -28,11 +28,23 @@ function emptyState() {
   return { version: STATE_VERSION, tabs: {}, sessions: {} };
 }
 
-/** Accept a v1 file (`tasks` cache, no version) and lift it to v2. */
+/** Accept a v1 file (`tasks` cache) or a v2 file (no provenance) and lift it. */
 function migrate(parsed) {
   if (!parsed || typeof parsed !== "object") return emptyState();
   const state = emptyState();
-  if (parsed.tabs && typeof parsed.tabs === "object") state.tabs = parsed.tabs;
+  if (parsed.tabs && typeof parsed.tabs === "object") {
+    for (const [id, tab] of Object.entries(parsed.tabs)) {
+      if (!tab || typeof tab !== "object") continue;
+      state.tabs[id] = {
+        ...tab,
+        provenance: tab.provenance === "manual" || tab.manual === true ? "manual" : "auto",
+        // Tabs that already have a label were named under the old policy; keep
+        // them as they are instead of restarting every tab on upgrade.
+        frozen: typeof tab.frozen === "boolean" ? tab.frozen : Boolean(tab.label),
+      };
+      delete state.tabs[id].manual;
+    }
+  }
   // v1 kept the session cache under `tasks`; the stamp embeds TASK_VERSION, so a
   // stale entry simply misses and is recomputed.
   const sessions = parsed.sessions || parsed.tasks;

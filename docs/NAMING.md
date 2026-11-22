@@ -100,6 +100,15 @@ Windows 上 pi 常常是 Git-Bash 包装：`sh.exe /e/…/prefix/pi --model …`
 
 `truncate()` 逐码点累加，CJK 算 2 格，超宽时留 1 格放 `…`。标签是纯文本（不含 ANSI），所以不需要处理转义序列。
 
+## 什么时候会变（autoMode）
+
+| `autoMode` | 行为 |
+|---|---|
+| `once`（默认） | 首轮未完成时先用程序名/agent 名占位；首轮完成（`stopReason`/`stop_reason` 不是 `tool_use` 一类，或出现 `result`）且算出 `session-name` / `session-task` / `agent-title` 时改名并冻结；此后不再变，直到人工改名或新的 `/name` |
+| `follow` | 每趟对账都按最新会话重算，适合想让标签实时反映进度 |
+
+**不许退化**：来源有明确分数（`session-name` 100 > `session-task` 90 > `agent-title` 80 > `agent-name` 70 > `agent-cmdline` 60 > `agent-program` 55 > `program` 50 > `agent-kind` 40 > `shell` 30）。一趟读不到会话（文件被清理、临时锁冲突）只会保留旧标签，不会退回 `pwsh`。当前 label 还是 herdr 的数字默认名、或已经被人改过时，不受这条限制。
+
 ## 为什么不用 LLM 取名
 
 讨论过：可以（`ctx.modelRegistry.complete()` + `pi.setSessionName()`），但那需要另一个进程、另一个失败面、以及每次会话的 token 成本。当前方案零网络、零模型、纯本地，且 `/name` 已经给了人工精确控制的入口。要加的话，写端是 pi 扩展，读端（`session_info`）不用改。

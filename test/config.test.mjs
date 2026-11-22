@@ -134,3 +134,22 @@ test("config: CLI overrides beat both file and environment", () => {
     box.done();
   }
 });
+
+test("config: autoMode only accepts once or follow", () => {
+  const box = sandbox();
+  try {
+    const dir = join(box.dir, "herdr", "plugins", "config", "herdr-automatic-rename-win");
+    writeConfig(join(dir, "config.json"), { autoMode: "follow" });
+    const cfg = loadConfig({ APPDATA: box.dir, USERPROFILE: "C:\\Users\\x" });
+    assert.equal(cfg.autoMode, "follow");
+    assert.deepEqual(cfg.warnings, []);
+
+    writeConfig(join(dir, "config.json"), { autoMode: "always" });
+    const bad = loadConfig({ APPDATA: box.dir, USERPROFILE: "C:\\Users\\x" });
+    assert.equal(bad.autoMode, "once");
+    assert.equal(bad.warnings.length, 1);
+    assert.match(bad.warnings[0], /autoMode/);
+  } finally {
+    box.done();
+  }
+});

@@ -29,6 +29,8 @@
 
 ## 标签一直不变 / 停在旧名字
 
+先看 `doctor`：如果 `reason` 是 `frozen`，这是 `autoMode: "once"` 的正常行为——第一轮完成后标签就定稿了。想让它继续跟着对话变，把配置改成 `"autoMode": "follow"`；或者对单个 tab 执行 `node bin/ar.mjs reset <tab-id>` 重新交给插件（会重新命名并再次冻结）。
+
 `state.json` 里按 `(TASK_VERSION, 文件大小, mtime)` 缓存了会话摘要。如果会话文件没变，标签就不会重算。改了提取逻辑要加 `TASK_VERSION`；只是想让某个 tab 重算，`reset` 它。
 
 另一种情况：`/name` 不产生 herdr 事件，所以标签要等下一趟对账才更新。切一下 tab，或者 `node bin/ar.mjs startup`。

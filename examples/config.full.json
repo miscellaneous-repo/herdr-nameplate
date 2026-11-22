@@ -75,5 +75,6 @@
   "cacheMaxSessions": 200,
   "maxProcessLookups": 16,
   "timeoutMs": 8000,
-  "herdrBin": ""
+  "herdrBin": "",
+  "autoMode": "once"
 }

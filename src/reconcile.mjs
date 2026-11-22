@@ -26,6 +26,26 @@ function isDefaultLabel(label) {
   return /^\d+$/.test(String(label || ""));
 }
 
+// How much a label source knows about the conversation. `follow` mode and the
+// pre-freeze phase of `once` never replace a higher-ranked label with a lower
+// one: a transient read failure must not turn "自建商店项目修复 bug" into "pwsh".
+const SOURCE_RANK = {
+  "session-name": 100,
+  "session-task": 90,
+  "agent-title": 80,
+  "agent-name": 70,
+  "agent-cmdline": 60,
+  "agent-program": 55,
+  program: 50,
+  "ignored-program": 45,
+  "agent-kind": 40,
+  shell: 30,
+};
+const rankOf = (source) => SOURCE_RANK[source] || 0;
+// Sources that actually say what the tab is doing; freezing on a program name
+// would pin every tab to "pwsh".
+const MEANINGFUL = new Set(["session-name", "session-task", "agent-title"]);
+
 /** True when `a` is a timestamp that is newer than `b` (both may be ""). */
 function isNewer(a, b) {
   if (!a) return false;
@@ -64,7 +84,7 @@ export function gitBranch(cwd, cfg, deps = {}) {
  * Returns { name, nameAt, task }.
  */
 export function resolveSession(cfg, pane, state, home, deps = {}) {
-  const none = { name: "", nameAt: "", task: "" };
+  const none = { name: "", nameAt: "", task: "", completed: false };
   if (cfg.sessionTask === false && cfg.sessionName === false) return none;
   const sess = pane.agent_session;
   if (!sess || !sess.value) return none;
@@ -77,7 +97,12 @@ export function resolveSession(cfg, pane, state, home, deps = {}) {
   state.sessions = state.sessions || {};
   const cached = state.sessions[file];
   if (cached && cached.stamp === stamp) {
-    return { name: cached.name || "", nameAt: cached.nameAt || "", task: cached.task || "" };
+    return {
+      name: cached.name || "",
+      nameAt: cached.nameAt || "",
+      task: cached.task || "",
+      completed: Boolean(cached.completed),
+    };
   }
 
   const info = (deps.readSessionInfo || readSessionInfo)(file, { tailBytes: cfg.sessionTailBytes });
@@ -104,8 +129,9 @@ export function resolveSession(cfg, pane, state, home, deps = {}) {
     name = "";
     nameAt = "";
   }
+  const completed = Boolean(info?.completed);
 
-  state.sessions[file] = { stamp, name, nameAt, task };
+  state.sessions[file] = { stamp, name, nameAt, task, completed };
 
   // A long-lived machine accumulates one entry per session; drop the oldest half
   // once past the cap. Object key order is insertion order, so this is FIFO.
@@ -113,7 +139,7 @@ export function resolveSession(cfg, pane, state, home, deps = {}) {
   const max = cfg.cacheMaxSessions || 200;
   if (keys.length > max) for (const k of keys.slice(0, keys.length - Math.floor(max / 2))) delete state.sessions[k];
 
-  return { name, nameAt, task };
+  return { name, nameAt, task, completed };
 }
 
 /**
@@ -171,12 +197,14 @@ export function reconcile(cfg, deps = {}) {
     let sessionTask = "";
     let sessionName = "";
     let sessionNameAt = "";
+    let sessionCompleted = false;
     if (pane.agent) {
       try {
         const resolved = resolveSession(cfg, pane, state, home, deps);
         sessionTask = resolved.task;
         sessionName = resolved.name;
         sessionNameAt = resolved.nameAt;
+        sessionCompleted = resolved.completed;
       } catch (err) {
         result.errors.push({ tabId: tab.tab_id, where: "session", message: String(err?.message || err) });
       }
@@ -205,6 +233,7 @@ export function reconcile(cfg, deps = {}) {
     // debounced `tab.created` event.
     const oursLooking = String(tab.label || "").includes(String(cfg.contextSep).trim());
     const looksManual =
+      recorded?.provenance === "manual" ||
       Boolean(recorded?.manual) ||
       labelDrifted ||
       (!recorded && !isDefaultLabel(tab.label) && !oursLooking);
@@ -245,11 +274,22 @@ export function reconcile(cfg, deps = {}) {
       state.tabs[tab.tab_id] = {
         label: recorded?.label || "",
         source: "manual",
-        manual: true,
+        provenance: "manual",
+        frozen: true,
         ownName,
         nameSeenAt: sessionNameAt || recorded?.nameSeenAt || "",
       };
       result.skipped.push({ tabId: tab.tab_id, reason: "hand-renamed", label: tab.label });
+      continue;
+    }
+
+    // `once`: a frozen tab keeps the label it got when its first turn finished.
+    // Hand-renames are caught above; a `/name` typed later is a human edit and
+    // still gets through.
+    const isAuto = !recorded || recorded.provenance !== "manual";
+    const namedNow = Boolean(sessionName) && Boolean(recorded) && nameIsNewer;
+    if (isAuto && cfg.autoMode === "once" && recorded?.frozen && !namedNow) {
+      result.skipped.push({ tabId: tab.tab_id, reason: "frozen", label: tab.label });
       continue;
     }
 
@@ -258,11 +298,29 @@ export function reconcile(cfg, deps = {}) {
       result.skipped.push({ tabId: tab.tab_id, reason: "nothing to say", label: tab.label });
       continue;
     }
+    // No downgrades: keeping a good label beats replacing it with a worse one
+    // just because this pass could not read the transcript.
+    if (
+      isAuto &&
+      recorded?.source &&
+      !labelDrifted &&
+      rankOf(computed.source) < rankOf(recorded.source)
+    ) {
+      result.skipped.push({ tabId: tab.tab_id, reason: `kept ${recorded.source}`, label: tab.label });
+      continue;
+    }
+    const frozen =
+      Boolean(recorded?.frozen) ||
+      namedNow ||
+      (cfg.autoMode === "once" && sessionCompleted && MEANINGFUL.has(computed.source));
+    const provenance = namedNow || recorded?.provenance === "manual" ? "manual" : "auto";
     if (target === tab.label) {
       result.skipped.push({ tabId: tab.tab_id, reason: "already correct", label: tab.label });
       state.tabs[tab.tab_id] = {
         label: target,
         source: computed.source,
+        provenance,
+        frozen,
         ownName,
         nameSeenAt: sessionNameAt || recorded?.nameSeenAt || "",
       };
@@ -279,6 +337,8 @@ export function reconcile(cfg, deps = {}) {
       state.tabs[tab.tab_id] = {
         label: target,
         source: computed.source,
+        provenance,
+        frozen,
         ownName,
         nameSeenAt: sessionNameAt || recorded?.nameSeenAt || "",
       };

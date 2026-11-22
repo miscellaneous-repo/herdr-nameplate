@@ -118,7 +118,7 @@ test("pass: a tab renamed before our first pass is treated as hand-named", () =>
   });
   assert.equal(h.calls.renames.some((r) => r.tabId === "w1:t1"), false);
   assert.equal(out.skipped.find((s) => s.tabId === "w1:t1").reason, "hand-renamed");
-  assert.equal(state.tabs["w1:t1"].manual, true);
+  assert.equal(state.tabs["w1:t1"].provenance, "manual");
 });
 
 test("pass: reset opts a hand-named tab back in", () => {
@@ -284,4 +284,99 @@ test("pass: nothing to say leaves herdr's label untouched", () => {
   const t1 = out.skipped.find((s) => s.tabId === "w1:t1");
   assert.equal(t1.reason, "nothing to say");
   assert.equal(h.calls.renames.some((r) => r.tabId === "w1:t1"), false);
+});
+test("pass: once names a tab from the first turn but does not freeze it before the turn completes", () => {
+  const h = fakeHerdr({ snapshot: agentSnapshot("2") });
+  const state = { tabs: {} };
+  const out = reconcile(cfg(), {
+    herdr: h,
+    env: { USERPROFILE: "C:\\Users\\Ernesto" },
+    state,
+    persistState: false,
+    ...sessionDeps({ prompts: ["帮我整理这个月的账单数据"], completed: false }),
+  });
+  assert.equal(out.renames.length, 1);
+  assert.equal(out.renames[0].source, "session-task");
+  assert.equal(state.tabs["w1:t2"].frozen, false);
+});
+
+test("pass: once freezes the tab when the first turn has completed", () => {
+  const h = fakeHerdr({ snapshot: agentSnapshot("2") });
+  const state = { tabs: {} };
+  reconcile(cfg(), {
+    herdr: h,
+    env: { USERPROFILE: "C:\\Users\\Ernesto" },
+    state,
+    persistState: false,
+    ...sessionDeps({ prompts: ["帮我整理这个月的账单数据"], completed: true }),
+  });
+  assert.equal(state.tabs["w1:t2"].frozen, true);
+  assert.equal(state.tabs["w1:t2"].provenance, "auto");
+});
+
+test("pass: once leaves a frozen tab alone when the conversation moves on", () => {
+  const h = fakeHerdr({ snapshot: agentSnapshot("\u6574\u7406\u8d26\u5355") });
+  const out = reconcile(cfg(), {
+    herdr: h,
+    env: { USERPROFILE: "C:\\Users\\Ernesto" },
+    state: {
+      tabs: {
+        "w1:t2": { label: "\u6574\u7406\u8d26\u5355", source: "session-task", provenance: "auto", frozen: true, ownName: "2", nameSeenAt: "" },
+      },
+    },
+    persistState: false,
+    ...sessionDeps({ prompts: ["另一个完全不同的任务，要重新写"], completed: true }),
+  });
+  assert.equal(h.calls.renames.length, 0);
+  assert.equal(out.skipped.find((s) => s.tabId === "w1:t2").reason, "frozen");
+});
+
+test("pass: follow keeps updating a tab after it was named", () => {
+  const h = fakeHerdr({ snapshot: agentSnapshot("\u6574\u7406\u8d26\u5355") });
+  const out = reconcile(cfg({ autoMode: "follow" }), {
+    herdr: h,
+    env: { USERPROFILE: "C:\\Users\\Ernesto" },
+    state: {
+      tabs: {
+        "w1:t2": { label: "\u6574\u7406\u8d26\u5355", source: "session-task", provenance: "auto", frozen: true, ownName: "2", nameSeenAt: "" },
+      },
+    },
+    persistState: false,
+    ...sessionDeps({ prompts: ["另一个完全不同的任务，要重新写"], completed: true }),
+  });
+  assert.equal(out.renames.length, 1);
+  assert.ok(out.renames[0].to.includes("另一个完全不同的任务"));
+});
+
+test("pass: a weaker source never overwrites a better label", () => {
+  const h = fakeHerdr({ snapshot: agentSnapshot("\u6574\u7406\u8d26\u5355") });
+  const out = reconcile(cfg(), {
+    herdr: h,
+    env: { USERPROFILE: "C:\\Users\\Ernesto" },
+    state: {
+      tabs: {
+        "w1:t2": { label: "\u6574\u7406\u8d26\u5355", source: "session-task", provenance: "auto", frozen: false, ownName: "2", nameSeenAt: "" },
+      },
+    },
+    persistState: false,
+    ...sessionDeps({}),
+  });
+  assert.equal(h.calls.renames.length, 0);
+  assert.equal(out.skipped.find((s) => s.tabId === "w1:t2").reason, "kept session-task");
+});
+
+test("pass: a later /name still updates a frozen tab", () => {
+  const h = fakeHerdr({ snapshot: agentSnapshot("\u6574\u7406\u8d26\u5355") });
+  const out = reconcile(cfg(), {
+    herdr: h,
+    env: { USERPROFILE: "C:\\Users\\Ernesto" },
+    state: {
+      tabs: {
+        "w1:t2": { label: "\u6574\u7406\u8d26\u5355", source: "session-task", provenance: "auto", frozen: true, ownName: "2", nameSeenAt: "2026-11-20T00:00:00.000Z" },
+      },
+    },
+    persistState: false,
+    ...sessionDeps({ name: "\u4eba\u5de5\u547d\u540d", nameAt: "2026-11-22T00:00:00.000Z" }),
+  });
+  assert.deepEqual(h.calls.renames, [{ tabId: "w1:t2", label: "\u4eba\u5de5\u547d\u540d" }]);
 });

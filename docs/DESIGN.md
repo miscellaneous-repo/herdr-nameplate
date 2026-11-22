@@ -47,28 +47,46 @@ herdr event
 
 ```jsonc
 {
-  "version": 2,
+  "version": 3,
   "tabs": {
     "w6:t2": {
       "label": "自建商店项目修复 bug",  // 我们上次写进去的标签
       "source": "session-name",          // 哪个来源算出来的（排查用）
+      "provenance": "auto",              // auto = 我们起的；manual = 人改的，永远不动
+      "frozen": true,                    // once 模式下已定稿，不再跟着对话变
       "ownName": "worker-dst-2",         // herdr 的原生 tab 名，改名后仍记得
       "nameSeenAt": "2026-11-22T14:00:27.171Z" // 上次见到的 /name 时间
     }
   },
   "sessions": {
     "C:\\Users\\x\\.pi\\sessions\\…jsonl": {
-      "stamp": "7:12345:1700000000000",  // TASK_VERSION:size:mtime
-      "name": "", "nameAt": "", "task": "…"
+      "stamp": "10:12345:1700000000000", // TASK_VERSION:size:mtime
+      "name": "", "nameAt": "", "task": "…", "completed": true
     }
   }
 }
 ```
 
 - **原子写**：写 `<path>.<pid>.tmp` 再 `renameSync`，断电不会留下半个 JSON。
-- **v1 → v2**：v1 的 `tasks` 直接当 `sessions` 用；stamp 里带 `TASK_VERSION`，逻辑变了旧条目自然失效。
+- **v1 → v2 → v3**：v1 的 `tasks` 直接当 `sessions`；v2 的 tab 补 `provenance`（`manual` 布尔字段优先）与 `frozen`（有标签就算已定稿）；stamp 里带 `TASK_VERSION`，逻辑变了旧条目自然失效。
 - **上限**：`cacheMaxSessions`（200）超过后按插入顺序删掉最旧的一半。
 - **位置**：默认在 herdr 的插件配置目录，因为插件根目录会在 `herdr plugin update` 时被整体替换。
+
+## 自动命名状态机（`autoMode`）
+
+```
+            首轮未完成            首轮完成 + 读到有意义的名字
+  占位名 ───────────────► 任务名 ─────────────────────────► frozen
+  (program/agent)          (session-name/task/title)          │
+                                                               │ 手工 rename / 新 /name
+                                                               ▼
+                                                          manual（永久）
+```
+
+- `once`（默认）：只有 `MEANINGFUL` 来源（`session-name`、`session-task`、`agent-title`）才允许冻结；程序名只是占位符。
+- `follow`：不设 `frozen` 限制，每趟按最新会话重算。
+- 两种模式都受「不许退化」约束：`SOURCE_RANK` 分数低的来源不能覆盖分数高的旧标签，除非当前还是数字默认名或标签已经漂移。
+- `completed` 来自会话记录：pi 的 `stopReason`、Claude 的 `message.stop_reason`（`tool_use` 一类不算完成），或 `type:"result"`。
 
 ## 手工改名的判定
 

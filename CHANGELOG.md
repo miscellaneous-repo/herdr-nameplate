@@ -4,6 +4,24 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] — 2026-11-23
+
+### Added
+
+- `autoMode` with two values: `once` (default) names a tab when its first turn
+  completes and then freezes it; `follow` keeps the label in sync with the
+  conversation. Turn completion is read from pi's `stopReason` / Claude's
+  `stop_reason` / `result` records.
+- No downgrade: a failed transcript read keeps the previous, better label
+  instead of falling back to `pwsh` (explicit source ranking).
+
+### Changed
+
+- State file is v3: tabs carry `provenance` (`auto` | `manual`) and `frozen`;
+  v1/v2 files migrate on load (`TASK_VERSION` 10).
+- Freezing never blocks the two manual channels: a hand rename or a later
+  `/name` still wins.
+
 ## [0.2.1] — 2026-11-23
 
 ### Fixed

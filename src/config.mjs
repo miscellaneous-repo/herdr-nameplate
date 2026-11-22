@@ -27,6 +27,9 @@ export const DEFAULTS = {
   // `sessionName` is a name the human typed (`/name`), applied verbatim.
   sessionTask: true,
   sessionName: true,
+  // "once": name a tab when its first turn finishes, then freeze it.
+  // "follow": keep the label in sync with the conversation.
+  autoMode: "once",
   sessionTailBytes: 65536,
 
   // --- per-part budgets -----------------------------------------------------
@@ -193,6 +196,9 @@ function validate(user, warnings) {
         out[key] = {};
         for (const [k, v] of Object.entries(value)) out[key][String(k).toLowerCase()] = String(v);
       } else warnings.push(`"programAliases" must be an object (ignored)`);
+    } else if (key === "autoMode") {
+      if (value === "once" || value === "follow") out[key] = value;
+      else warnings.push(`"autoMode" must be "once" or "follow" (ignored)`);
     } else if (key === "contextSep" || key === "shellName" || key === "stateDir" || key === "stateFileName" || key === "logFileName" || key === "herdrBin") {
       if (typeof value === "string") out[key] = value;
       else warnings.push(`"${key}" must be a string (ignored)`);

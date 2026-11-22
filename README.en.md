@@ -77,6 +77,17 @@ herdr plugin link "$(npm root -g)\herdr-automatic-rename-win" --enabled
 
 **"What is it doing".** pi's terminal title is useless, so the task is read from the agent's own transcript: pi's `agent_session.value` path, or Claude's `%USERPROFILE%\.claude\projects\<flattened cwd>\<id>.jsonl`. Only the tail is read (64KB, widening to 256KB/1MB when it holds nothing usable) plus 64KB of head for the session opener. `ai-title` wins; otherwise the newest human message that is not a bare acknowledgement or a follow-up question. Records are cached by `(TASK_VERSION, size, mtime)`, so an unchanged session costs no I/O.
 
+## Automatic naming: once / follow
+
+`autoMode` decides whether an automatic label keeps following the conversation:
+
+| Value | Behaviour |
+|---|---|
+| `once` (default) | Show a placeholder (program / agent name) first; once the session **finishes its first turn** (an assistant record whose `stopReason`/`stop_reason` is anything but `tool_use`, or a `result` record) and a meaningful name is available (`/name`, task summary, `ai-title`), rename it and **freeze** it. Later turns leave it alone. |
+| `follow` | Re-evaluate on every pass, so the label tracks the current work. |
+
+Freezing pins a good name, it does not lock the tab: renaming the tab by hand, or typing `/name` again, still wins (the two peer manual channels). There is also **no downgrade**: `session-name` > `session-task` > `agent-title` > `agent-name` > `agent-cmdline` > `agent-program` > `program` > `agent-kind` > `shell`, so a pass that cannot read the transcript keeps the old label instead of falling back to `pwsh`.
+
 ## Manual names (two peer channels)
 
 | Channel | How | How it is seen |
@@ -100,7 +111,7 @@ Merged lowest → highest:
 
 `HERDR_AUTOMATIC_RENAME_CONFIG` (legacy `AR_CONFIG`) replaces the list. Unknown keys and bad types become warnings in `doctor`; they never stop the plugin. See [`examples/`](examples) for ready-made files, and `src/config.mjs` for every key and its default.
 
-Frequently used keys: `tabContext`, `showBranch`, `sessionTask`, `sessionName`, `maxTitleLen` (28), `maxContextLen` (12), `maxBranchLen` (12), `shellName` ("pwsh"), `hideShell`, `programAliases`, `defaultBranches`, `maxProcessLookups` (16), `timeoutMs` (8000), `herdrBin`.
+Frequently used keys: `tabContext`, `showBranch`, `sessionTask`, `sessionName`, `autoMode` (`once`/`follow`), `maxTitleLen` (28), `maxContextLen` (12), `maxBranchLen` (12), `shellName` ("pwsh"), `hideShell`, `programAliases`, `defaultBranches`, `maxProcessLookups` (16), `timeoutMs` (8000), `herdrBin`.
 
 Environment: `HERDR_AUTOMATIC_RENAME_CONFIG` / `_DISABLE=1` / `_DRY_RUN=1` / `_TAB=<id>` / `_LOG=<path>` / `_STATE_DIR=<dir>`, plus `HERDR_PLUGIN_CONFIG_DIR`; the old `AR_*` names still work.
 

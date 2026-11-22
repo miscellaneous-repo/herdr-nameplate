@@ -34,7 +34,7 @@ const DEFAULT_TAIL_BYTES = 64 * 1024;
 // Bump when the extractor or the condenser changes: cached tasks in the state
 // file are keyed on the stamp, and an unchanged session would otherwise keep
 // serving the label an older version produced.
-export const TASK_VERSION = 9;
+export const TASK_VERSION = 10;
 // A wide tail is only tried when the narrow one holds no human text: a long
 // stretch of tool results can push the last prompt megabytes back.
 const TAIL_TRIES = [1, 4, 16];
@@ -81,11 +81,29 @@ function userRecordText(rec) {
  * messages out of a chunk of JSONL. Returns { name, title, prompt, prompts } —
  * `prompts[0]` is the newest, `prompt` is kept for callers that only want one.
  */
+const TERMINAL_STOP = new Set([
+  "stop",
+  "end_turn",
+  "endTurn",
+  "length",
+  "max_tokens",
+  "maxTokens",
+  "content_filter",
+  "contentFilter",
+  "stop_sequence",
+  "aborted",
+  "error",
+]);
+// A response that ended because it wanted a tool is the middle of a turn, not
+// the end of one.
+const MID_TURN_STOP = new Set(["tool_use", "toolUse", "tool_calls", "toolCalls", "function_call", "functionCall"]);
+
 export function scanTail(chunk) {
   const lines = String(chunk).split("\n");
   let name = "";
   let nameAt = "";
   let title = "";
+  let completed = false;
   const prompts = [];
   let undo = "";
   for (let i = lines.length - 1; i >= 0; i--) {
@@ -99,6 +117,18 @@ export function scanTail(chunk) {
       continue;
     }
     if (!rec || typeof rec !== "object") continue;
+    if (rec.type === "result") completed = true;
+    const msg = rec.message;
+    if (!completed && msg && msg.role === "assistant") {
+      const stop =
+        typeof msg.stopReason === "string"
+          ? msg.stopReason
+          : typeof msg.stop_reason === "string"
+            ? msg.stop_reason
+            : "";
+      if (TERMINAL_STOP.has(stop)) completed = true;
+      else if (stop && !MID_TURN_STOP.has(stop)) completed = true;
+    }
     if (!name && rec.type === "session_info" && typeof rec.name === "string") {
       name = rec.name.trim();
       nameAt = typeof rec.timestamp === "string" ? rec.timestamp : "";
@@ -113,10 +143,10 @@ export function scanTail(chunk) {
     if (!undo && rec.type === "custom" && rec.customType === "pi-undo-redo" && rec.data) {
       undo = typeof rec.data.prompt === "string" ? rec.data.prompt.trim() : "";
     }
-    if (name && title && prompts.length >= 8) break;
+    if (name && title && prompts.length >= 8 && completed) break;
   }
   if (!prompts.length && undo) prompts.push(undo);
-  return { name, nameAt, title, prompt: prompts[0] || "", prompts };
+  return { name, nameAt, title, prompt: prompts[0] || "", prompts, completed };
 }
 
 /** Text of the last human message in a chunk of JSONL, or "". */
@@ -156,7 +186,7 @@ function looksUsable(text) {
 }
 
 /** Read the tail (and the head) of a session file:
- * { name, nameAt, title, prompt, prompts, firstPrompt }. */
+ * { name, nameAt, title, prompt, prompts, firstPrompt, completed }. */
 export function readSessionInfo(file, opts = {}) {
   const tailBytes = opts.tailBytes || DEFAULT_TAIL_BYTES;
   let fd;
@@ -179,13 +209,15 @@ export function readSessionInfo(file, opts = {}) {
       readSync(fd, buf, 0, take, size - take);
       const info = scanTail(buf.toString("utf8"));
       // Widen the window only when this one holds nothing a label could come
-      // from: a tail full of tool results can put the last real prompt far back.
-      if (info.name || info.title || (info.prompt && looksUsable(info.prompt))) return { ...info, firstPrompt };
+      // from, or when it has a prompt but no completed turn yet: the assistant
+      // record that proves completion can sit behind a wall of tool results.
+      const usable = info.name || info.title || (info.prompt && looksUsable(info.prompt));
+      if (usable && (info.completed || take === size)) return { ...info, firstPrompt };
       if (take === size) return { ...info, firstPrompt };
     }
-    return { name: "", nameAt: "", title: "", prompt: "", prompts: [], firstPrompt };
+    return { name: "", nameAt: "", title: "", prompt: "", prompts: [], firstPrompt, completed: false };
   } catch {
-    return { name: "", nameAt: "", title: "", prompt: "", prompts: [], firstPrompt };
+    return { name: "", nameAt: "", title: "", prompt: "", prompts: [], firstPrompt: "", completed: false };
   } finally {
     if (fd !== undefined) {
       try {
