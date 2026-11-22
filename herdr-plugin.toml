@@ -1,0 +1,89 @@
+id = "herdr-automatic-rename-win"
+name = "Herdr Automatic Rename (Windows)"
+version = "0.1.0"
+
+# The upstream plugin (qu8n/herdr-automatic-rename) declares
+# platforms = ["linux", "macos"] and drives everything through bash + jq. This is
+# a Windows port: same idea, execution layer replaced with node.
+min_herdr_version = "0.7.1"
+description = "Name herdr tabs after where the work is and what is running there -- the directory, the git branch, then the foreground program or the task an agent reports. Windows port of herdr-automatic-rename (tab naming only)."
+platforms = ["windows"]
+
+# herdr runs [[startup]] once per enabled plugin after it restores the session,
+# which is what puts names back on a restored session before the user touches
+# anything.
+[[startup]]
+command = ["node", "bin/ar.mjs", "startup"]
+
+# --- Tabs: naming ---
+[[events]]
+on = "tab.created"
+command = ["node", "bin/ar.mjs", "tab.created"]
+
+[[events]]
+on = "tab.closed"
+command = ["node", "bin/ar.mjs", "tab.closed"]
+
+# Re-apply on a user rename. Our own rename re-fires this too; the idempotent
+# "already correct" skip stops the loop, and a label we did not write is treated
+# as hand-named and left alone.
+[[events]]
+on = "tab.renamed"
+command = ["node", "bin/ar.mjs", "tab.renamed"]
+
+[[events]]
+on = "tab.focused"
+command = ["node", "bin/ar.mjs", "tab.focused"]
+
+[[events]]
+on = "tab.moved"
+command = ["node", "bin/ar.mjs", "tab.moved"]
+
+# --- Panes: the foreground program and the agent task live on the pane ---
+[[events]]
+on = "pane.focused"
+command = ["node", "bin/ar.mjs", "pane.focused"]
+
+# No agent.created event exists; membership changes are inferred from the pane
+# lifecycle.
+[[events]]
+on = "pane.agent_detected"
+command = ["node", "bin/ar.mjs", "pane.agent_detected"]
+
+# An agent's status change flips the title between spinner states, so this is
+# what keeps an agent tab's task current.
+[[events]]
+on = "pane.agent_status_changed"
+command = ["node", "bin/ar.mjs", "pane.agent_status_changed"]
+
+[[events]]
+on = "pane.created"
+command = ["node", "bin/ar.mjs", "pane.created"]
+
+[[events]]
+on = "pane.closed"
+command = ["node", "bin/ar.mjs", "pane.closed"]
+
+[[events]]
+on = "pane.exited"
+command = ["node", "bin/ar.mjs", "pane.exited"]
+
+[[events]]
+on = "pane.moved"
+command = ["node", "bin/ar.mjs", "pane.moved"]
+
+# Opt a hand-named tab back into automatic naming:
+#   herdr plugin action invoke herdr-automatic-rename-win.reset
+[[actions]]
+id = "reset"
+title = "Reset tab to automatic naming"
+contexts = ["global"]
+command = ["node", "bin/ar.mjs", "reset"]
+
+# Explain why a tab has the name it has (dry pass + reasons):
+#   herdr plugin action invoke herdr-automatic-rename-win.doctor
+[[actions]]
+id = "doctor"
+title = "Herdr Automatic Rename: explain this tab's name"
+contexts = ["global"]
+command = ["node", "bin/ar.mjs", "doctor"]

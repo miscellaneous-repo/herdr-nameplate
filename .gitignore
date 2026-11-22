@@ -1,0 +1,8 @@
+# runtime state (machine-local: label history, caches, hand-rename memory)
+.state.json
+last-run.log
+config.json
+.lock/
+
+# throwaway debug scripts
+_dbg*.mjs

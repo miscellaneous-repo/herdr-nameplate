@@ -1,0 +1,20 @@
+{
+  "name": "herdr-automatic-rename-win",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Herdr plugin: name tabs after what each conversation is doing (Windows port, Node)",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "test": "node --test",
+    "doctor": "node bin/ar.mjs doctor",
+    "doctor:json": "node bin/ar.mjs doctor --json",
+    "pass": "node bin/ar.mjs startup --verbose",
+    "reset": "node bin/ar.mjs reset",
+    "link": "herdr plugin link . --enabled",
+    "unlink": "herdr plugin unlink herdr-automatic-rename-win",
+    "status": "herdr plugin list"
+  }
+}
