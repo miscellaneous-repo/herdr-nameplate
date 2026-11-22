@@ -33,7 +33,7 @@ const cfg = (over = {}) => ({
 const snapshot = (t1Label = "1") => ({
   tabs: [
     { tab_id: "w1:t1", label: t1Label, workspace_id: "w1", pane_count: 1, focused: true },
-    { tab_id: "w1:t2", label: "ops", workspace_id: "w1", pane_count: 1, focused: false },
+    { tab_id: "w1:t2", label: "2", workspace_id: "w1", pane_count: 1, focused: false },
   ],
   panes: [
     { pane_id: "w1:p1", tab_id: "w1:t1", cwd: "G:\\Herdr\\workflow", focused: true, agent: null },
@@ -108,6 +108,87 @@ test("pass: a hand rename sticks while the session name has not changed", () => 
   });
   assert.equal(h.calls.renames.length, 0);
   assert.equal(out.skipped.find((s) => s.tabId === "w1:t2").reason, "hand-renamed");
+});
+
+test("pass: a tab renamed before our first pass is treated as hand-named", () => {
+  const h = fakeHerdr({ snapshot: snapshot("\u624b\u5de5\u540d"), process: processMap() });
+  const state = { tabs: {} };
+  const out = reconcile(cfg(), {
+    herdr: h, env: { USERPROFILE: "C:\\Users\\Ernesto" }, state, persistState: false, git: () => "",
+  });
+  assert.equal(h.calls.renames.some((r) => r.tabId === "w1:t1"), false);
+  assert.equal(out.skipped.find((s) => s.tabId === "w1:t1").reason, "hand-renamed");
+  assert.equal(state.tabs["w1:t1"].manual, true);
+});
+
+test("pass: reset opts a hand-named tab back in", () => {
+  const h = fakeHerdr({ snapshot: snapshot("\u624b\u5de5\u540d"), process: processMap() });
+  const out = reconcile(cfg(), {
+    herdr: h,
+    env: { USERPROFILE: "C:\\Users\\Ernesto" },
+    state: { tabs: {}, adoptUnknown: true },
+    persistState: false,
+    git: () => "",
+  });
+  assert.equal(h.calls.renames.some((r) => r.tabId === "w1:t1"), true);
+  assert.equal(out.renames.find((r) => r.tabId === "w1:t1").source, "program");
+});
+
+test("pass: a manual mark sticks even when the record has no label", () => {
+  const h = fakeHerdr({ snapshot: agentSnapshot("MY NAME") });
+  const out = reconcile(cfg(), {
+    herdr: h,
+    env: { USERPROFILE: "C:\\Users\\Ernesto" },
+    state: { tabs: { "w1:t2": { manual: true, label: "", nameSeenAt: "2026-11-22T00:00:00.000Z" } } },
+    persistState: false,
+    ...sessionDeps({ name: "\u65e7\u540d\u5b57", nameAt: "2026-11-22T00:00:00.000Z" }),
+  });
+  assert.equal(h.calls.renames.length, 0);
+  assert.equal(out.skipped.find((s) => s.tabId === "w1:t2").reason, "hand-renamed");
+});
+
+test("pass: an old /name cannot resurface over a hand rename", () => {
+  const h = fakeHerdr({ snapshot: agentSnapshot("MY NAME") });
+  const out = reconcile(cfg(), {
+    herdr: h,
+    env: { USERPROFILE: "C:\\Users\\Ernesto" },
+    // The /name predates the manual rename: nameSeenAt already covers it.
+    state: { tabs: { "w1:t2": { label: "workflow \u203a pi", nameSeenAt: "2026-11-22T00:00:00.000Z" } } },
+    persistState: false,
+    ...sessionDeps({ name: "\u65e7\u540d\u5b57", nameAt: "2026-11-20T00:00:00.000Z" }),
+  });
+  assert.equal(h.calls.renames.length, 0);
+});
+
+test("pass: closed tabs are pruned from the state", () => {
+  const h = fakeHerdr({ snapshot: snapshot(), process: processMap() });
+  const state = { tabs: { "w9:t9": { label: "gone" } }, sessions: {} };
+  reconcile(cfg(), {
+    herdr: h, env: { USERPROFILE: "C:\\Users\\Ernesto" }, state, persistState: false, git: () => "",
+  });
+  assert.equal(Object.hasOwn(state.tabs, "w9:t9"), false);
+});
+
+test("pass: a /name that scrolled out of the tail window stays on the tab", () => {
+  const h = fakeHerdr({ snapshot: agentSnapshot("MY NAME") });
+  const state = {
+    tabs: {},
+    sessions: {
+      "C:\\sessions\\a.jsonl": { stamp: "100:1", name: "\u8001\u540d\u5b57", nameAt: "2026-11-20T00:00:00.000Z", task: "old" },
+    },
+  };
+  // The session grew: stamp changed, the new read sees the task but no longer the name.
+  const out = reconcile(cfg(), {
+    herdr: h,
+    env: { USERPROFILE: "C:\\Users\\Ernesto" },
+    state,
+    persistState: false,
+    sessionStamp: () => "101:1",
+    readSessionInfo: () => ({ name: "", nameAt: "", title: "", prompt: "\u7ee7\u7eed\u4fee\u590d\u8fd9\u4e2a\u9879\u76ee", prompts: [], firstPrompt: "" }),
+    git: () => "",
+  });
+  assert.equal(out.renames.length, 0);
+  assert.equal(state.sessions["C:\\sessions\\a.jsonl"].name, "\u8001\u540d\u5b57");
 });
 
 test("gitBranch: returns the branch, '' on failure", () => {

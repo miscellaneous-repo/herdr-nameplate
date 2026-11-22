@@ -79,7 +79,7 @@ npm run link        # = herdr plugin link . --enabled
 
 | 优先级 | `source` | 来源 |
 |---|---|---|
-| 0 | — | **你手工改的 tab 名**（`hand-renamed`）：只要 herdr 报的 label 不是我们上次写的，就当成你改的，一直不动 |
+| 0 | — | **你手工改的 tab 名**（`hand-renamed`）：label 不是 herdr 的数字默认值、又不像我们写的样子（含 `›`），或者和我们上次写的不同 ⇒ 当成你改的，一直不动 |
 | 1 | `session-name` | **你自己给会话起的名字**：pi 的 `/name xxx`、`--name`，或扩展调 `pi.setSessionName()`，记录在会话 jsonl 的 `session_info.name` 里，**原样**当标签（不拼目录/分支、不做压缩） |
 | 2 | `session-task` | **这个对话在干什么**：Claude 自写的 `ai-title`，否则最近一条像任务的人类消息（详见下节） |
 | 3 | `agent-title` | agent 上报的终端标题。Claude 会写任务；pi 永远写 `π - <目录>`，所以对 pi 无效 |
@@ -111,19 +111,20 @@ pi 的终端标题没有信息量，所以任务取自 **agent 自己的会话�
 
 | 通道 | 怎么用 | 插件怎么发现 |
 |---|---|---|
-| pi `/name` | 在 pi 里 `/name 部署检查` | 尾读 `{"type":"session_info","name":"部署检查","timestamp":"…"}` |
-| herdr 改名 | `herdr tab rename w6:t2 部署检查` 或 UI 里改 | state 里记的 label 与 herdr 报的不一致 ⇒ `hand-renamed` |
+| pi `/name` | 在 pi 里 `/name 部署检查` | 读 `{"type":"session_info","name":"部署检查","timestamp":"…"}`：先看尾部；有缓存名或刚升过 `TASK_VERSION` 而尾部没有时，全文扫一次最后一条 |
+| herdr 改名 | `herdr tab rename w6:t2 部署检查` 或 UI 里改 | state 里记的 label 与 herdr 报的不一致 ⇒ `hand-renamed`；**从没记录过**的 tab，只要 label 不是数字、也不含 `›`，同样算你改的（新建 tab 后 3 秒内改名就是这种情况） |
 
 两者**没有优先级保护**，谁更新得晚算谁的。herdr 的 tab 对象没有时间戳，只有 `session_info` 有 `timestamp`，所以插件把每次用过的 `nameSeenAt` 记在 state 里：
 
 - `/name` 的时间戳比 `nameSeenAt` 新 ⇒ 新指令，覆盖标签；
-- label 变了而 `/name` 没变 ⇒ 手工改名，从此刻不再碰。
+- label 变了而 `/name` 没变 ⇒ 手工改名，从此刻不再碰；
+- 第一次见到某个 tab 时，只有数字默认名 / 像我们写的名字才允许改写，其余一律先记成手改。
 
 想让某个 tab 重新回到自动命名：
 
 ```powershell
 herdr plugin action invoke herdr-automatic-rename-win.reset   # 全部
-node bin/ar.mjs reset --tab w6:t2                             # 单个
+node bin/ar.mjs reset w6:t2                                   # 单个（也接受 --tab w6:t2）
 ```
 
 > 已知歧义：手工改的名字恰好等于插件算出的目标名时，会被记成「我们自己写的」，之后目标变化时被改掉。没有 tab 时间戳就无法彻底区分。
@@ -190,7 +191,7 @@ node bin/ar.mjs reset --tab w6:t2                             # 单个
 herdr-automatic-rename doctor                 # 干跑：每个 tab 现在叫什么、应该叫什么、为什么
 herdr-automatic-rename doctor --tab w6:t2     # 只看一个
 herdr-automatic-rename doctor --json          # 机器可读
-herdr-automatic-rename reset [--tab w6:t2]    # 忘掉我们的标签，让 tab 重新参与自动命名
+herdr-automatic-rename reset [w6:t2]         # 忘掉我们的标签，让 tab 重新参与自动命名
 herdr-automatic-rename --version
 herdr-automatic-rename tab.created --dry-run  # 模拟某个事件（排查用）
 ```

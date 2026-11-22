@@ -26,7 +26,7 @@
 // Only the tail is read. A session file grows to megabytes and the interesting
 // records are always near the end.
 
-import { closeSync, openSync, fstatSync, readSync, statSync } from "node:fs";
+import { closeSync, openSync, fstatSync, readFileSync, readSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { displayWidth } from "./text.mjs";
 
@@ -34,7 +34,7 @@ const DEFAULT_TAIL_BYTES = 64 * 1024;
 // Bump when the extractor or the condenser changes: cached tasks in the state
 // file are keyed on the stamp, and an unchanged session would otherwise keep
 // serving the label an older version produced.
-export const TASK_VERSION = 7;
+export const TASK_VERSION = 9;
 // A wide tail is only tried when the narrow one holds no human text: a long
 // stretch of tool results can push the last prompt megabytes back.
 const TAIL_TRIES = [1, 4, 16];
@@ -200,6 +200,41 @@ export function readSessionInfo(file, opts = {}) {
 /** Read the tail of a session file and pull the last human message out of it. */
 export function readLastUserText(file, opts = {}) {
   return readSessionInfo(file, opts).prompt;
+}
+
+/**
+ * The last `/name` in the whole session file.
+ *
+ * `/name` is a property of the session, not of its tail: in a long session the
+ * `session_info` record can sit megabytes before the end. The tail scan above
+ * stays the fast path; this is the fallback for sessions that are known (or
+ * suspected) to have a name. Returns { name, nameAt }.
+ */
+export function readSessionName(file, opts = {}) {
+  try {
+    const st = statSync(file);
+    const maxBytes = opts.maxBytes || 64 * 1024 * 1024;
+    if (!st.isFile() || st.size > maxBytes) return { name: "", nameAt: "" };
+    const text = readFileSync(file, "utf8");
+    let name = "";
+    let nameAt = "";
+    for (const line of text.split("\n")) {
+      if (!line.includes('"session_info"')) continue;
+      try {
+        const rec = JSON.parse(line);
+        if (rec?.type !== "session_info" || typeof rec.name !== "string") continue;
+        const value = rec.name.trim();
+        if (!value) continue;
+        name = value;
+        nameAt = typeof rec.timestamp === "string" ? rec.timestamp : "";
+      } catch {
+        // a torn line at the tail boundary is not fatal
+      }
+    }
+    return { name, nameAt };
+  } catch {
+    return { name: "", nameAt: "" };
+  }
 }
 
 /** Cheap change stamp, so a pass can skip re-reading an unchanged session. */

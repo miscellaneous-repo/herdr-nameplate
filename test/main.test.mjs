@@ -111,6 +111,25 @@ test("cli: reset clears the remembered labels", async () => {
   }
 });
 
+test("reset: a positional tab id is honoured", async () => {
+  const box = sandbox();
+  try {
+    saveState({ stateDir: box.dir, stateFileName: "state.json" }, {
+      version: STATE_VERSION,
+      tabs: { "w1:t1": { label: "x" }, "w1:t2": { label: "y" } },
+      sessions: {},
+    });
+    const { code, out } = await capture(() => main(["reset", "w1:t1"], { env: box.env }));
+    assert.equal(code, 0);
+    assert.match(out, /reset w1:t1/);
+    const { state } = loadState({ stateDir: box.dir, stateFileName: "state.json" });
+    assert.deepEqual(Object.keys(state.tabs), ["w1:t2"]);
+    assert.equal(state.adoptOnly, "w1:t1");
+  } finally {
+    box.done();
+  }
+});
+
 test("cli: a disabled plugin exits quietly", async () => {
   const box = sandbox();
   try {

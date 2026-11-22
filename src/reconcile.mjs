@@ -16,10 +16,15 @@ import { execFileSync } from "node:child_process";
 import { computeLabel } from "./naming.mjs";
 import { createHerdrClient } from "./herdr.mjs";
 import { homeDir } from "./config.mjs";
-import { pickTask, readSessionInfo, sessionFile, sessionStamp } from "./task.mjs";
+import { TASK_VERSION, pickTask, readSessionInfo, readSessionName, sessionFile, sessionStamp } from "./task.mjs";
 import { acquireLock, loadState, saveState } from "./state.mjs";
 
 const ISO = /^\d{4}-\d{2}-\d{2}T/;
+
+/** herdr numbers new tabs "1", "2", … — the only label we may overwrite blind. */
+function isDefaultLabel(label) {
+  return /^\d+$/.test(String(label || ""));
+}
 
 /** True when `a` is a timestamp that is newer than `b` (both may be ""). */
 function isNewer(a, b) {
@@ -77,8 +82,28 @@ export function resolveSession(cfg, pane, state, home, deps = {}) {
 
   const info = (deps.readSessionInfo || readSessionInfo)(file, { tailBytes: cfg.sessionTailBytes });
   const task = cfg.sessionTask === false ? "" : pickTask(info, cfg.maxTitleLen);
-  const name = cfg.sessionName === false ? "" : String(info?.name || "").trim();
-  const nameAt = cfg.sessionName === false ? "" : String(info?.nameAt || "");
+  // `/name` is a property of the whole session, not of its last few KB. Once we
+  // have seen one, keep it even after it scrolls out of the tail window; only a
+  // newer session_info record (a later /name) may replace it. When the tail has
+  // no name but we expect one (a cached name, or a cache written by an older
+  // TASK_VERSION), scan the whole file once and take the last record.
+  const versionChanged = Boolean(cached) && !String(cached.stamp || "").startsWith(`${TASK_VERSION}:`);
+  let name = String(info?.name || "").trim();
+  let nameAt = String(info?.nameAt || "").trim();
+  if (!name && (cached?.name || versionChanged)) {
+    const full = (deps.readSessionName || readSessionName)(file);
+    if (full?.name) {
+      name = String(full.name).trim();
+      nameAt = String(full.nameAt || "").trim();
+    } else if (cached?.name) {
+      name = String(cached.name).trim();
+      nameAt = String(cached.nameAt || "").trim();
+    }
+  }
+  if (cfg.sessionName === false) {
+    name = "";
+    nameAt = "";
+  }
 
   state.sessions[file] = { stamp, name, nameAt, task };
 
@@ -106,10 +131,16 @@ export function reconcile(cfg, deps = {}) {
   const workspaces = new Map((snap.workspaces || []).map((w) => [w.workspace_id, w]));
   const agentNames = new Map((snap.agents || []).map((a) => [a.pane_id, a.name || ""]));
 
-  const loaded = deps.state ? { state: deps.state, migratedFrom: "" } : loadState(cfg);
+  const loaded = deps.state ? { state: deps.state, migratedFrom: "", fresh: false } : loadState(cfg);
   const state = loaded.state;
   const result = { renames: [], skipped: [], errors: [] };
   let lookups = 0;
+
+  // The very first pass on a machine adopts every tab, the way an install is
+  // expected to. Later, `reset` sets state.adoptUnknown so the user can hand the
+  // tabs back. In between, a label we never wrote is treated as a human's.
+  const adoptUnknown = (Boolean(state.adoptUnknown) || loaded.fresh) && !cfg.onlyTab;
+  if (adoptUnknown && !cfg.dryRun) state.adoptUnknown = false;
 
   for (const tab of tabs) {
     const pane = panes.find((p) => p.tab_id === tab.tab_id && (tab.pane_count === 1 || p.focused));
@@ -162,8 +193,23 @@ export function reconcile(cfg, deps = {}) {
       : null;
 
     const labelDrifted = Boolean(recorded && recorded.label && recorded.label !== tab.label);
-    const nameIsNewer = Boolean(sessionName) && isNewer(sessionNameAt, recorded?.nameSeenAt || "");
-    const handNamed = labelDrifted && !nameIsNewer;
+    // `/name` can only outrank a manual label when we know which human edit came
+    // last, i.e. when the tab has a record. Without one there is no ordering to
+    // compare, and the label already on screen wins.
+    const nameIsNewer =
+      Boolean(sessionName) && Boolean(recorded) && isNewer(sessionNameAt, recorded?.nameSeenAt || "");
+    // A tab we have never named is only ours to name while it still carries
+    // herdr's numeric default or a label shaped like one of ours. Anything else
+    // was typed by a human (or another plugin) before our first pass — most
+    // commonly a tab renamed in the second between its creation and the
+    // debounced `tab.created` event.
+    const oursLooking = String(tab.label || "").includes(String(cfg.contextSep).trim());
+    const looksManual =
+      Boolean(recorded?.manual) ||
+      labelDrifted ||
+      (!recorded && !isDefaultLabel(tab.label) && !oursLooking);
+    const handNamed =
+      looksManual && !nameIsNewer && !adoptUnknown && state.adoptOnly !== tab.tab_id;
 
     // Settle the cheap answer first: when the transcript or the agent title
     // already names the tab, the process table cannot improve on it, and each
@@ -193,6 +239,16 @@ export function reconcile(cfg, deps = {}) {
     }
 
     if (handNamed) {
+      // Keep `label` as the last thing we wrote: the mismatch is what marks the
+      // tab as hand-named on later passes. `nameSeenAt` still advances so an old
+      // /name cannot resurface as "newer" and overwrite the human's label.
+      state.tabs[tab.tab_id] = {
+        label: recorded?.label || "",
+        source: "manual",
+        manual: true,
+        ownName,
+        nameSeenAt: sessionNameAt || recorded?.nameSeenAt || "",
+      };
       result.skipped.push({ tabId: tab.tab_id, reason: "hand-renamed", label: tab.label });
       continue;
     }
@@ -229,6 +285,14 @@ export function reconcile(cfg, deps = {}) {
     }
     result.renames.push({ tabId: tab.tab_id, from: tab.label, to: target, source: computed.source });
   }
+
+  // Closed tabs otherwise sit in the state file forever and a recycled tab id
+  // would inherit a stale "hand-renamed" mark.
+  if (!cfg.dryRun && !cfg.onlyTab) {
+    const live = new Set(tabs.map((t) => t.tab_id));
+    for (const id of Object.keys(state.tabs)) if (!live.has(id)) delete state.tabs[id];
+  }
+  if (!cfg.dryRun && (!cfg.onlyTab || cfg.onlyTab === state.adoptOnly)) delete state.adoptOnly;
 
   if (deps.persistState !== false) {
     try {

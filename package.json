@@ -1,6 +1,6 @@
 {
   "name": "herdr-automatic-rename-win",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Herdr plugin for Windows: name each tab after where the work is and what its agent is doing.",
   "keywords": [
     "herdr",

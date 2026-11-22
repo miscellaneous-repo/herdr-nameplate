@@ -1,6 +1,6 @@
 id = "herdr-automatic-rename-win"
 name = "Herdr Automatic Rename (Windows)"
-version = "0.2.0"
+version = "0.2.1"
 
 # The upstream plugin (qu8n/herdr-automatic-rename) declares
 # platforms = ["linux", "macos"] and drives everything through bash + jq. This is

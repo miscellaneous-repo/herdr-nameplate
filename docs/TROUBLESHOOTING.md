@@ -20,6 +20,13 @@
 
 写进 `%APPDATA%\herdr\plugins\config\herdr-automatic-rename-win\config.json`。确认 doctor 末尾的 `config:` 一行指向这个文件——如果不是，说明你在别处也有一份 `config.json`（插件根目录的那份优先级更高）。
 
+## 我刚改完名，过一会儿又被改回去
+
+0.2.1 之前：新建 tab 后 3 秒内改名，`tab.created` 那趟还没有我们的记录，会把 label 当成自己写的。现在没有记录、又不是数字默认名/不含 `›` 的标签一律按手改处理。若仍被改，跑 `doctor` 看 `source`：
+
+- `session-name` / `session-task`：说明是 `/name` 或会话内容在驱动。想固定名字，用 `/name`（它会盖过摘要）；
+- `program` / `agent-*`：说明这个 tab 在 state 里没有手改记录，`reset` 之后第一次见到的 label 就是它自己的。
+
 ## 标签一直不变 / 停在旧名字
 
 `state.json` 里按 `(TASK_VERSION, 文件大小, mtime)` 缓存了会话摘要。如果会话文件没变，标签就不会重算。改了提取逻辑要加 `TASK_VERSION`；只是想让某个 tab 重算，`reset` 它。

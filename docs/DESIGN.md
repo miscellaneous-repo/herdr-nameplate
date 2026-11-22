@@ -75,11 +75,21 @@ herdr event
 herdr 的 tab 没有时间戳、没有 revision，只有一个当前 label。所以「这个 label 是谁写的」只能靠我们自己的记忆：
 
 ```
-recorded.label === tab.label          → 是我们写的，可以继续改
-recorded.label !== tab.label          → 不是我们写的
-   └─ /name 的 timestamp > nameSeenAt → 是你刚 /name 的，覆盖
-   └─ 否则                            → hand-renamed，永远别碰
+没有记录（新 tab / state 丢过）
+  ├─ label 是数字（herdr 默认） → 我们的，可以改
+  ├─ label 含分隔符 ›          → 像我们的，可以改
+  └─ 其它                      → 当你手改的，记下来，不动
+
+有记录
+  recorded.label === tab.label          → 是我们写的，可以继续改
+  recorded.label !== tab.label          → 不是我们写的
+     ├─ /name 的 timestamp > nameSeenAt → 是你刚 /name 的，覆盖
+     └─ 否则                            → hand-renamed，永远别碰
 ```
+
+第一条分支是 0.2.1 补的：`tab.created` 事件有约 3 秒防抖，新建 tab 后立刻改名时我们还没有任何记录，旧逻辑会把 label 当成自己写的、下一趟改回 `pwsh`。
+
+`/name` 记录会滚出尾读窗口（长会话可达数 MB），所以 `readSessionName` 在「有缓存名」或「刚换过 `TASK_VERSION`」时全文扫一次，并把名字粘在 state 里。
 
 两条通道（`/name` 与 UI 改名）因此是同级：谁后发生听谁的。代价是「手工改的名字恰好等于目标名」无法区分——没有时间戳就没有办法。
 

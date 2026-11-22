@@ -64,7 +64,7 @@ herdr plugin link "$(npm root -g)\herdr-automatic-rename-win" --enabled
 
 | # | `source` | Meaning |
 |---|---|---|
-| 0 | — | a tab you renamed by hand (`hand-renamed`) — never touched again |
+| 0 | — | a tab you renamed by hand (`hand-renamed`) — never touched again: either the label differs from the one we last wrote, or we have no record of the tab and the label is neither herdr's number nor something shaped like ours |
 | 1 | `session-name` | a name **you** gave the session (`/name`, `--name`, `pi.setSessionName()`), used verbatim |
 | 2 | `session-task` | **what the conversation is doing**: Claude's `ai-title`, else the newest human message that reads like a task |
 | 3 | `agent-title` | the task an agent reports in its terminal title (pi always reports `π - <dir>`, so it never wins) |
@@ -81,14 +81,14 @@ herdr plugin link "$(npm root -g)\herdr-automatic-rename-win" --enabled
 
 | Channel | How | How it is seen |
 |---|---|---|
-| pi `/name` | `/name deploy check` in pi | `{"type":"session_info","name":"…","timestamp":"…"}` in the transcript |
-| herdr rename | `herdr tab rename w6:t2 deploy-check`, or the UI | the label differs from the one we last wrote ⇒ `hand-renamed` |
+| pi `/name` | `/name deploy check` in pi | `{"type":"session_info","name":"…","timestamp":"…"}` in the transcript: the tail first; when a cached name exists (or `TASK_VERSION` just changed) and the tail has none, the whole file is scanned once |
+| herdr rename | `herdr tab rename w6:t2 deploy-check`, or the UI | the label differs from the one we last wrote ⇒ `hand-renamed`; a tab we have no record of counts as hand-named unless its label is a number or contains `›` (typical for renaming within the 3 s before `tab.created` fires) |
 
 Neither outranks the other: the later change wins. herdr tabs carry no timestamp, so the plugin stores `nameSeenAt` in its state file and compares `/name` timestamps against it.
 
 ```powershell
-node bin/ar.mjs reset --tab w6:t2     # let one tab back into automatic naming
-node bin/ar.mjs reset                 # all tabs
+node bin/ar.mjs reset w6:t2     # let one tab back into automatic naming (--tab also works)
+node bin/ar.mjs reset           # all tabs
 ```
 
 ## Configuration

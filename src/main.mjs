@@ -85,10 +85,11 @@ export async function main(argv, deps = {}) {
 
   try {
     if (action === "reset") {
-      const cleared = clearTabs(cfg, args.flags.tab || "");
-      payload.result = { cleared, tabId: args.flags.tab || null };
-      log.add(`reset ${args.flags.tab || "all"}: ${cleared} tab(s)`);
-      if (!args.flags.json) process.stdout.write(`reset ${args.flags.tab || "all"}: ${cleared} tab(s)\n`);
+      const tabId = args.flags.tab || args.positional[1] || "";
+      const cleared = clearTabs(cfg, tabId);
+      payload.result = { cleared, tabId: tabId || null };
+      log.add(`reset ${tabId || "all"}: ${cleared} tab(s)`);
+      if (!args.flags.json) process.stdout.write(`reset ${tabId || "all"}: ${cleared} tab(s)\n`);
     } else if (action === "doctor") {
       const dry = { ...cfg, dryRun: true, onlyTab: args.flags.tab || cfg.onlyTab };
       const result = reconcile(dry, { ...deps, persistState: false });

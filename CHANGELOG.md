@@ -4,6 +4,21 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.1] — 2026-11-23
+
+### Fixed
+
+- A tab renamed by hand in the seconds between its creation and the debounced
+  `tab.created` event was overwritten with the program name: a label we have no
+  record of is now treated as hand-written unless it is herdr's number or looks
+  like one of ours.
+- A `/name` that scrolled out of the session tail window was forgotten and the
+  tab fell back to the transcript summary; names are now sticky and backed by a
+  whole-file scan when needed (`TASK_VERSION` 9).
+- `reset` lost its one-shot adoption flags when the state file was migrated, so
+  the pass after a reset renamed nothing.
+- `reset <tab>` ignored the positional tab id and cleared every tab.
+
 ## [0.2.0] — 2026-11-23
 
 The first release meant to be installed by strangers.

@@ -37,6 +37,9 @@ function migrate(parsed) {
   // stale entry simply misses and is recomputed.
   const sessions = parsed.sessions || parsed.tasks;
   if (sessions && typeof sessions === "object") state.sessions = sessions;
+  // Transient one-shot flags must survive a load or `reset` silently stops working.
+  if (parsed.adoptUnknown === true) state.adoptUnknown = true;
+  if (typeof parsed.adoptOnly === "string" && parsed.adoptOnly) state.adoptOnly = parsed.adoptOnly;
   state.version = STATE_VERSION;
   return state;
 }
@@ -49,20 +52,20 @@ export function loadState(cfg) {
   const path = statePath(cfg);
   if (existsSync(path)) {
     try {
-      return { state: migrate(JSON.parse(readFileSync(path, "utf8"))), path, migratedFrom: "" };
+      return { state: migrate(JSON.parse(readFileSync(path, "utf8"))), path, migratedFrom: "", fresh: false };
     } catch {
-      return { state: emptyState(), path, migratedFrom: "" };
+      return { state: emptyState(), path, migratedFrom: "", fresh: false };
     }
   }
   const legacy = cfg.legacyStateFile || join(PLUGIN_DIR, LEGACY_FILE_NAME);
   if (existsSync(legacy)) {
     try {
-      return { state: migrate(JSON.parse(readFileSync(legacy, "utf8"))), path, migratedFrom: legacy };
+      return { state: migrate(JSON.parse(readFileSync(legacy, "utf8"))), path, migratedFrom: legacy, fresh: false };
     } catch {
       /* fall through to an empty state */
     }
   }
-  return { state: emptyState(), path, migratedFrom: "" };
+  return { state: emptyState(), path, migratedFrom: "", fresh: true };
 }
 
 export function saveState(cfg, state) {
@@ -83,6 +86,10 @@ export function clearTabs(cfg, tabId) {
       cleared += 1;
     }
   }
+  // Without this, tabs whose labels are not herdr's numeric defaults would be
+  // read as hand-named on the next pass and reset would do nothing.
+  if (tabId) state.adoptOnly = tabId;
+  else state.adoptUnknown = true;
   saveState(cfg, state);
   return cleared;
 }
